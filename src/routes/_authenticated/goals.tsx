@@ -289,6 +289,7 @@ function AddMilestoneInput({ onAdd }: { onAdd: (t: string) => void }) {
 
 function GoalForm({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<"short" | "long">("short");
@@ -297,17 +298,33 @@ function GoalForm({ onDone }: { onDone: () => void }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
-    const { error } = await supabase.from("goals").insert({
-      user_id: user.id,
+    const id = crypto.randomUUID();
+    const goal: Goal = {
+      id,
       title,
       description: description || null,
       category,
       deadline: deadline || null,
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Goal added");
-    onDone();
+      completed: false,
+    };
+    qc.setQueryData<Goal[]>(["goals", user.id], (old) => [goal, ...(old ?? [])]);
+    try {
+      const queued = await writeOrQueue({
+        label: `Goal "${title}"`,
+        table: "goals",
+        type: "insert",
+        values: { ...goal, user_id: user.id },
+      });
+      toast.success(queued ? "Saved offline — will sync later" : "Goal added");
+      onDone();
+    } catch (err) {
+      qc.setQueryData<Goal[]>(["goals", user.id], (old) =>
+        (old ?? []).filter((g) => g.id !== id),
+      );
+      toast.error(err instanceof Error ? err.message : "Could not add goal");
+    }
   }
+
 
   return (
     <form onSubmit={submit} className="space-y-4">
