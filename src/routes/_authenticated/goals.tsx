@@ -69,24 +69,91 @@ function GoalsPage() {
     },
   });
 
+  function patchGoals(fn: (list: Goal[]) => Goal[]) {
+    qc.setQueryData<Goal[]>(["goals", user?.id], (old) => fn(old ?? []));
+  }
+  function patchMilestones(fn: (list: Milestone[]) => Milestone[]) {
+    qc.setQueryData<Milestone[]>(["milestones", user?.id], (old) => fn(old ?? []));
+  }
+
   async function toggleGoal(g: Goal) {
-    await supabase.from("goals").update({ completed: !g.completed }).eq("id", g.id);
-    qc.invalidateQueries({ queryKey: ["goals"] });
+    patchGoals((list) => list.map((x) => (x.id === g.id ? { ...x, completed: !g.completed } : x)));
+    try {
+      const queued = await writeOrQueue({
+        label: `Goal "${g.title}"`,
+        table: "goals",
+        type: "update",
+        rowId: g.id,
+        values: { completed: !g.completed },
+      });
+      if (queued) toast.success("Saved offline — will sync later");
+      else qc.invalidateQueries({ queryKey: ["goals"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update goal");
+      qc.invalidateQueries({ queryKey: ["goals"] });
+    }
   }
+
   async function removeGoal(id: string) {
-    await supabase.from("goals").delete().eq("id", id);
-    qc.invalidateQueries({ queryKey: ["goals"] });
-    qc.invalidateQueries({ queryKey: ["milestones"] });
+    patchGoals((list) => list.filter((x) => x.id !== id));
+    patchMilestones((list) => list.filter((m) => m.goal_id !== id));
+    try {
+      const queued = await writeOrQueue({
+        label: "Delete goal",
+        table: "goals",
+        type: "delete",
+        rowId: id,
+      });
+      if (queued) toast.success("Deleted offline — will sync later");
+      else {
+        qc.invalidateQueries({ queryKey: ["goals"] });
+        qc.invalidateQueries({ queryKey: ["milestones"] });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete goal");
+      qc.invalidateQueries({ queryKey: ["goals"] });
+    }
   }
+
   async function toggleMilestone(m: Milestone) {
-    await supabase.from("milestones").update({ completed: !m.completed }).eq("id", m.id);
-    qc.invalidateQueries({ queryKey: ["milestones"] });
+    patchMilestones((list) =>
+      list.map((x) => (x.id === m.id ? { ...x, completed: !m.completed } : x)),
+    );
+    try {
+      const queued = await writeOrQueue({
+        label: `Milestone "${m.title}"`,
+        table: "milestones",
+        type: "update",
+        rowId: m.id,
+        values: { completed: !m.completed },
+      });
+      if (queued) toast.success("Saved offline — will sync later");
+      else qc.invalidateQueries({ queryKey: ["milestones"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update milestone");
+      qc.invalidateQueries({ queryKey: ["milestones"] });
+    }
   }
+
   async function addMilestone(goalId: string, title: string) {
     if (!user || !title.trim()) return;
-    await supabase.from("milestones").insert({ user_id: user.id, goal_id: goalId, title });
-    qc.invalidateQueries({ queryKey: ["milestones"] });
+    const id = crypto.randomUUID();
+    patchMilestones((list) => [...list, { id, goal_id: goalId, title, completed: false }]);
+    try {
+      const queued = await writeOrQueue({
+        label: `Milestone "${title}"`,
+        table: "milestones",
+        type: "insert",
+        values: { id, user_id: user.id, goal_id: goalId, title },
+      });
+      if (queued) toast.success("Saved offline — will sync later");
+      else qc.invalidateQueries({ queryKey: ["milestones"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add milestone");
+      qc.invalidateQueries({ queryKey: ["milestones"] });
+    }
   }
+
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 md:px-6">
