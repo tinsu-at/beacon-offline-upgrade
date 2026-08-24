@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Delete, Fingerprint, ShieldCheck } from "lucide-react";
 import {
+  attemptsLeft,
+  blockedForMs,
   encodePattern,
   getLockConfig,
+  getRecoveryQuestion,
   isLockEnabled,
   markActive,
+  recordFailure,
+  resetThrottle,
+  setLock,
   shouldLockNow,
+  verifyRecoveryAnswer,
   verifySecret,
 } from "@/lib/lock";
+
 
 /** 3x3 pattern grid used by both the locker and the setup dialog. */
 export function PatternPad({
