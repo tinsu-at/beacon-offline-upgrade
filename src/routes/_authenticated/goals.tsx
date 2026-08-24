@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
+import { writeOrQueue } from "@/lib/offline";
 
 type Goal = {
   id: string;
