@@ -1,0 +1,75 @@
+name: Build Beacon Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Download the project
+      - name: Checkout project
+        uses: actions/checkout@v6
+
+      # 2. Java required by Android/Gradle
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # 3. Node 22 required by your Capacitor CLI
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      # 4. Verify versions
+      - name: Check environment
+        run: |
+          node --version
+          npm --version
+          java -version
+
+      # 5. Install web dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # 6. Verify Capacitor
+      - name: Check Capacitor
+        run: |
+          npx cap --version
+          npm list @capacitor/core
+          npm list @capacitor/cli
+          npm list @capacitor/android
+
+      # 7. Build the web application
+      - name: Build web app
+        run: npm run build
+
+      # 8. Sync Capacitor with Android
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      # 9. Make Gradle executable
+      - name: Prepare Gradle
+        working-directory: android
+        run: chmod +x gradlew
+
+      # 10. Build debug APK
+      - name: Build Android APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      # 11. Upload APK
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Beacon-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
