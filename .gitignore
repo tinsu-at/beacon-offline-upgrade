@@ -30,3 +30,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Android release signing (never commit)
+android/keystore.properties
+android/*.keystore
+android/*.jks
+android/app/build/
+android/build/
+android/.gradle/
+
+# Local env overrides (never commit real secrets)
+.env.local
+.env.*.local
+.dev.vars
+
+# Build artifacts
+dist/
+android/app/src/main/assets/public/

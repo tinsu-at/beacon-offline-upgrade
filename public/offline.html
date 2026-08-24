@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline — Beacon</title>
+    <meta name="theme-color" content="#28469E" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; min-height: 100%; }
+      body {
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: #FBF6EC;
+        color: #1A2340;
+        display: grid;
+        place-items: center;
+        min-height: 100dvh;
+        padding: 24px;
+      }
+      .card {
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+        background: rgba(255,255,255,0.7);
+        backdrop-filter: blur(14px);
+        border-radius: 28px;
+        border: 1px solid rgba(40,70,158,0.15);
+        padding: 32px 24px;
+        box-shadow: 0 20px 60px -20px rgba(40,70,158,0.25);
+      }
+      h1 { font-family: "Fraunces", Georgia, serif; font-size: 28px; margin: 0 0 8px; color: #28469E; }
+      p { font-size: 14px; line-height: 1.5; color: #4b5563; margin: 0 0 20px; }
+      .beacon {
+        width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 16px;
+        background: linear-gradient(135deg, #28469E, #6C8AE4);
+        display: grid; place-items: center; color: white; font-weight: 600; font-size: 22px;
+        box-shadow: 0 10px 30px -10px rgba(40,70,158,0.5);
+      }
+      button {
+        appearance: none; border: 0; cursor: pointer;
+        background: #28469E; color: white; font-weight: 500; font-size: 14px;
+        padding: 10px 22px; border-radius: 999px; margin-top: 4px;
+      }
+      button:hover { opacity: .92; }
+      .hint { margin-top: 14px; font-size: 12px; color: #6b7280; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0F1424; color: #F5F1E6; }
+        .card { background: rgba(20,26,48,0.7); border-color: rgba(202,232,232,0.15); }
+        p { color: #cbd5e1; }
+        .hint { color: #94a3b8; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card" role="main">
+      <div class="beacon" aria-hidden="true">B</div>
+      <h1>You're offline</h1>
+      <p>Beacon is here even without a connection. Your notes, habits, and reminders keep working. Some things (chat with Beacon, sync) need the internet.</p>
+      <button onclick="location.reload()">Try again</button>
+      <p class="hint">Tip: install Beacon to your home screen for the best offline experience.</p>
+    </main>
+  </body>
+</html>

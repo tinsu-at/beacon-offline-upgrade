@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#28469E</color>
+    <color name="colorPrimaryDark">#0F1729</color>
+    <color name="colorAccent">#CAE8E8</color>
+    <!-- Dark startup background: prevents the white flash before the WebView paints. -->
+    <color name="splashBackground">#0F1729</color>
+</resources>
