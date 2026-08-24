@@ -241,16 +241,28 @@
 @utility animate-fade-up { animation: beacon-fade-up .7s cubic-bezier(.2,.7,.2,1) both; }
 
 /* Full-screen / standalone mobile polish: respect notches and home
-   indicators, and never allow sideways scroll on small Android screens. */
-html, body {
-  overflow-x: hidden;
+   indicators, and never allow sideways scroll on small Android screens.
+   `overflow-x: hidden` on <html> is what breaks one-finger touch scrolling in
+   Android WebView / Chrome, so the horizontal clamp lives on <body> only and
+   vertical panning is explicitly allowed. */
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: clip;
   overscroll-behavior-y: none;
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
 }
 
 @utility safe-top { padding-top: env(safe-area-inset-top, 0px); }
 @utility safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
 @media (display-mode: standalone) {
-  body { user-select: none; }
-  input, textarea, [contenteditable] { user-select: text; }
+  /* Only chrome-like surfaces disable selection; `user-select: none` on <body>
+     suppresses single-finger scroll gestures in some Android WebViews. */
+  header, nav, button, [role="button"] { user-select: none; }
 }
+

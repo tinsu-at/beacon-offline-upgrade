@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Delete, Fingerprint, ShieldCheck } from "lucide-react";
 import {
+  attemptsLeft,
+  blockedForMs,
   encodePattern,
   getLockConfig,
+  getRecoveryQuestion,
   isLockEnabled,
   markActive,
+  recordFailure,
+  resetThrottle,
+  setLock,
   shouldLockNow,
+  verifyRecoveryAnswer,
   verifySecret,
 } from "@/lib/lock";
+
 
 /** 3x3 pattern grid used by both the locker and the setup dialog. */
 export function PatternPad({
@@ -140,12 +148,18 @@ export function PinPad({
 export function AppLock() {
   const [locked, setLocked] = useState(false);
   const [pin, setPin] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<"pin" | "pattern">(() => getLockConfig()?.kind ?? "pin");
+  const [mode, setMode] = useState<"unlock" | "recover" | "reset" | "reset-confirm">("unlock");
+  const [answer, setAnswer] = useState("");
+  const [question, setQuestion] = useState<string | null>(null);
+  const [firstSecret, setFirstSecret] = useState("");
+  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     const lockNow = () => {
       setKind(getLockConfig()?.kind ?? "pin");
+      setMode("unlock");
       setLocked(true);
     };
 
@@ -185,27 +199,132 @@ export function AppLock() {
     // `locked` is intentionally read through the closure guard only.
   }, [locked]);
 
-  const unlock = useCallback(async (secret: string) => {
-    if (await verifySecret(secret)) {
-      markActive();
-      setLocked(false);
-      setPin("");
-      setError(false);
-    } else {
-      setError(true);
-      setPin("");
-      if (navigator.vibrate) navigator.vibrate(80);
-    }
+  // Live countdown while guessing is blocked.
+  useEffect(() => {
+    if (!locked) return;
+    const tick = () => setCooldown(blockedForMs(mode === "recover" ? "recovery" : "unlock"));
+    tick();
+    const t = window.setInterval(tick, 1000);
+    return () => window.clearInterval(t);
+  }, [locked, mode]);
+
+  const finish = useCallback(() => {
+    markActive();
+    resetThrottle("unlock");
+    resetThrottle("recovery");
+    setLocked(false);
+    setPin("");
+    setAnswer("");
+    setFirstSecret("");
+    setMode("unlock");
+    setError(null);
   }, []);
 
+  const unlock = useCallback(
+    async (secret: string) => {
+      if (blockedForMs("unlock") > 0) {
+        setPin("");
+        return;
+      }
+      if (await verifySecret(secret)) {
+        finish();
+      } else {
+        recordFailure("unlock");
+        const left = attemptsLeft("unlock");
+        setError(
+          left > 0
+            ? `${kind === "pin" ? "Wrong PIN" : "Wrong pattern"} — ${left} ${left === 1 ? "try" : "tries"} left`
+            : "Too many attempts. Wait before trying again.",
+        );
+        setPin("");
+        if (navigator.vibrate) navigator.vibrate(80);
+      }
+    },
+    [finish, kind],
+  );
+
   useEffect(() => {
-    if (kind === "pin" && pin.length === 4) void unlock(pin);
-  }, [pin, kind, unlock]);
+    if (mode === "unlock" && kind === "pin" && pin.length === 4) void unlock(pin);
+  }, [pin, kind, mode, unlock]);
+
+  const applyNewSecret = useCallback(
+    async (secret: string) => {
+      const cfg = getLockConfig();
+      await setLock(kind, secret, cfg?.timeoutMin ?? 0);
+      finish();
+    },
+    [kind, finish],
+  );
+
+  const handleNewSecret = useCallback(
+    (secret: string) => {
+      if (mode === "reset") {
+        setFirstSecret(secret);
+        setPin("");
+        setMode("reset-confirm");
+        setError(null);
+        return;
+      }
+      if (secret === firstSecret) void applyNewSecret(secret);
+      else {
+        setPin("");
+        setFirstSecret("");
+        setMode("reset");
+        setError("They did not match. Start again.");
+      }
+    },
+    [mode, firstSecret, applyNewSecret],
+  );
+
+  useEffect(() => {
+    if ((mode === "reset" || mode === "reset-confirm") && kind === "pin" && pin.length === 4) {
+      handleNewSecret(pin);
+    }
+  }, [pin, kind, mode, handleNewSecret]);
+
+  async function submitAnswer(e: React.FormEvent) {
+    e.preventDefault();
+    if (blockedForMs("recovery") > 0) return;
+    if (await verifyRecoveryAnswer(answer)) {
+      resetThrottle("recovery");
+      setAnswer("");
+      setError(null);
+      setPin("");
+      setMode("reset");
+    } else {
+      recordFailure("recovery");
+      const left = attemptsLeft("recovery");
+      setError(
+        left > 0
+          ? `Incorrect answer — ${left} ${left === 1 ? "try" : "tries"} left`
+          : "Too many attempts. Wait before trying again.",
+      );
+      setAnswer("");
+    }
+  }
 
   if (!locked) return null;
 
+  const blocked = cooldown > 0;
+  const cooldownLabel = `Try again in ${Math.ceil(cooldown / 1000)}s`;
+
+  const title =
+    mode === "recover"
+      ? "Answer your recovery question"
+      : mode === "reset"
+        ? kind === "pin"
+          ? "Create a new PIN"
+          : "Draw a new pattern"
+        : mode === "reset-confirm"
+          ? kind === "pin"
+            ? "Confirm your new PIN"
+            : "Confirm your new pattern"
+          : kind === "pin"
+            ? "Enter PIN"
+            : "Draw pattern";
+
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-8 bg-[#0D0D0D] px-6 text-white">
+    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-8 overflow-y-auto bg-[#0D0D0D] px-6 py-10 text-white">
       <div className="flex flex-col items-center gap-3">
         <div className="grid h-14 w-14 place-items-center rounded-2xl border border-white/15">
           {kind === "pin" ? (
@@ -214,24 +333,78 @@ export function AppLock() {
             <Fingerprint className="h-6 w-6 text-sky-300" />
           )}
         </div>
-        <p className="text-sm text-white/70">
-          {error
-            ? kind === "pin"
-              ? "Wrong PIN, try again"
-              : "Wrong pattern, try again"
-            : kind === "pin"
-              ? "Enter PIN"
-              : "Draw pattern"}
-        </p>
+        <p className="text-sm text-white/70">{blocked ? cooldownLabel : (error ?? title)}</p>
+        {mode === "recover" && question && (
+          <p className="max-w-xs text-center text-sm text-white/50">{question}</p>
+        )}
       </div>
-      {kind === "pin" ? (
+
+      {mode === "recover" ? (
+        <form onSubmit={submitAnswer} className="flex w-full max-w-xs flex-col gap-3">
+          <input
+            autoFocus
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            disabled={blocked}
+            placeholder="Your answer"
+            className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm outline-none placeholder:text-white/30 focus:border-sky-300/60 disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={blocked || answer.trim().length === 0}
+            className="rounded-xl bg-sky-400/90 px-4 py-3 text-sm font-medium text-[#0D0D0D] disabled:opacity-40"
+          >
+            Verify
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("unlock");
+              setError(null);
+              setAnswer("");
+            }}
+            className="text-xs text-white/50 underline-offset-4 hover:underline"
+          >
+            Back to unlock
+          </button>
+        </form>
+      ) : blocked ? (
+        <p className="text-sm text-white/50">Locked out for a moment to prevent guessing.</p>
+      ) : kind === "pin" ? (
         <PinPad value={pin} onChange={setPin} />
       ) : (
-        <PatternPad onComplete={(n) => void unlock(encodePattern(n))} />
+        <PatternPad
+          onComplete={(n) =>
+            mode === "unlock"
+              ? void unlock(encodePattern(n))
+              : handleNewSecret(encodePattern(n))
+          }
+        />
       )}
+
+      {mode === "unlock" && (
+        <button
+          type="button"
+          onClick={() => {
+            const q = getRecoveryQuestion();
+            if (!q) {
+              setError("No recovery question set on this device.");
+              return;
+            }
+            setQuestion(q);
+            setError(null);
+            setMode("recover");
+          }}
+          className="text-xs text-sky-300/80 underline-offset-4 hover:underline"
+        >
+          Forgot {kind === "pin" ? "PIN" : "pattern"}?
+        </button>
+      )}
+
       <p className="text-center text-xs text-white/40">
         Beacon is locked on this device. Works fully offline.
       </p>
     </div>
   );
+
 }
