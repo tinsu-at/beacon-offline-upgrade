@@ -37,7 +37,7 @@ function DeveloperPage() {
   }, [query]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-6">
+    <div className="flex w-full flex-col gap-4 px-3 py-4 md:h-[calc(100dvh-3.5rem)] md:px-6 md:py-6">
       <header className="flex items-center gap-3">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-soft">
           <Code2 className="h-5 w-5" />
@@ -50,8 +50,9 @@ function DeveloperPage() {
         </div>
       </header>
 
-      <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-        <aside className="space-y-3">
+      <div className="grid gap-4 md:min-h-0 md:flex-1 md:grid-cols-[300px_1fr]">
+        <aside className="space-y-3 md:min-h-0 md:overflow-y-auto md:pr-1">
+
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
