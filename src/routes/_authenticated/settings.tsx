@@ -115,6 +115,7 @@ function SettingsPage() {
       setLockKind(cfg.kind);
       setLockTimeoutState(cfg.timeoutMin);
     }
+    setSavedRecovery(getRecoveryQuestion());
   }, []);
 
   async function saveProfile(e: React.FormEvent) {
