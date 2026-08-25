@@ -223,6 +223,7 @@ export function AppLock() {
 
   const finish = useCallback(() => {
     markActive();
+    lockedRef.current = false;
     resetThrottle("unlock");
     resetThrottle("recovery");
     setLocked(false);
