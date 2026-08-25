@@ -445,6 +445,74 @@ function SettingsPage() {
                   />
                 )}
               </div>
+
+              <div className="rounded-2xl border border-border p-4 space-y-3">
+                <div>
+                  <p className="font-medium">Recovery question</p>
+                  <p className="text-xs text-muted-foreground">
+                    {savedRecovery
+                      ? `Current question: “${savedRecovery}”. Used if you forget your ${lockKind === "pin" ? "PIN" : "pattern"}.`
+                      : "Set a question only you can answer, so you can reset your lock offline. The answer is stored only as a salted hash."}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="recovery-question">Question</Label>
+                  <Input
+                    id="recovery-question"
+                    value={recoveryQuestion}
+                    onChange={(e) => setRecoveryQuestion(e.target.value)}
+                    placeholder="e.g. Name of my first pet"
+                  />
+                  <Label htmlFor="recovery-answer">Answer</Label>
+                  <Input
+                    id="recovery-answer"
+                    value={recoveryAnswer}
+                    onChange={(e) => setRecoveryAnswer(e.target.value)}
+                    placeholder="Your answer"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-full"
+                    disabled={
+                      !isLockEnabled() ||
+                      recoveryQuestion.trim().length === 0 ||
+                      recoveryAnswer.trim().length === 0
+                    }
+                    onClick={async () => {
+                      await setRecovery(recoveryQuestion, recoveryAnswer);
+                      setSavedRecovery(getRecoveryQuestion());
+                      setRecoveryQuestion("");
+                      setRecoveryAnswer("");
+                      toast.success("Recovery question saved");
+                    }}
+                  >
+                    Save recovery question
+                  </Button>
+                  {savedRecovery && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={() => {
+                        clearRecovery();
+                        setSavedRecovery(null);
+                        toast.success("Recovery question removed");
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                {!isLockEnabled() && (
+                  <p className="text-xs text-muted-foreground">
+                    Set your PIN or pattern first, then add a recovery question.
+                  </p>
+                )}
+              </div>
             </>
           )}
         </CardContent>
