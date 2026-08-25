@@ -22,11 +22,14 @@ import {
   Unlock,
 } from "lucide-react";
 import {
+  clearRecovery,
   disableLock,
   getLockConfig,
+  getRecoveryQuestion,
   isLockEnabled,
   setLock,
   setLockTimeout,
+  setRecovery,
   type LockKind,
 } from "@/lib/lock";
 import { PinPad, PatternPad } from "@/components/app-lock";
