@@ -83,6 +83,9 @@ function SettingsPage() {
   const [lockSecret, setLockSecret] = useState("");
   const [lockStep, setLockStep] = useState<"idle" | "confirm">("idle");
   const [lockFirstSecret, setLockFirstSecret] = useState("");
+  const [recoveryQuestion, setRecoveryQuestion] = useState("");
+  const [recoveryAnswer, setRecoveryAnswer] = useState("");
+  const [savedRecovery, setSavedRecovery] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [push, setPush] = useState<PushStatus>({ state: "prompt" });
   const [expanded, setExpanded] = useState<NotifKey | null>(null);
