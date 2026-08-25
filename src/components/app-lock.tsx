@@ -156,24 +156,36 @@ export function AppLock() {
   const [firstSecret, setFirstSecret] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
+  const lockedRef = useRef(false);
+  lockedRef.current = locked;
+
   useEffect(() => {
     const lockNow = () => {
+      if (lockedRef.current) return;
       setKind(getLockConfig()?.kind ?? "pin");
       setMode("unlock");
+      setPin("");
+      setError(null);
+      lockedRef.current = true;
       setLocked(true);
     };
 
-    if (isLockEnabled() && shouldLockNow()) lockNow();
+    // Cold start: always lock when a lock is configured.
+    if (isLockEnabled()) lockNow();
     else markActive();
 
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") markActive();
-      else if (isLockEnabled() && shouldLockNow()) lockNow();
+      if (document.visibilityState === "hidden") {
+        // Remember when we left so the auto-lock delay can be measured.
+        markActive();
+      } else if (isLockEnabled() && shouldLockNow()) {
+        lockNow();
+      }
     };
 
     // Inactivity auto-lock while the app stays in the foreground.
     const onActivity = () => {
-      if (!locked) markActive();
+      if (!lockedRef.current) markActive();
     };
     const activityEvents = ["pointerdown", "keydown", "scroll", "touchstart"] as const;
     for (const ev of activityEvents) {
@@ -181,9 +193,10 @@ export function AppLock() {
     }
     const idleTimer = window.setInterval(() => {
       const cfg = getLockConfig();
+      // timeoutMin 0 means "lock when backgrounded", never while in use.
       if (!cfg?.enabled || cfg.timeoutMin <= 0) return;
       if (document.visibilityState !== "visible") return;
-      if (shouldLockNow()) lockNow();
+      if (!lockedRef.current && shouldLockNow()) lockNow();
     }, 15_000);
 
     document.addEventListener("visibilitychange", onVisibility);
@@ -196,8 +209,8 @@ export function AppLock() {
       window.removeEventListener("pagehide", markActive);
       window.removeEventListener("beacon-lock-now", lockNow);
     };
-    // `locked` is intentionally read through the closure guard only.
-  }, [locked]);
+  }, []);
+
 
   // Live countdown while guessing is blocked.
   useEffect(() => {
