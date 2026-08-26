@@ -176,7 +176,7 @@ function CameraPage() {
               onClick={capture}
               disabled={!ready}
               aria-label="Take photo"
-              className="h-18 w-18 grid h-[72px] w-[72px] place-items-center rounded-full border-4 border-white/70 bg-white/90 text-black disabled:opacity-40"
+              className="grid h-[72px] w-[72px] place-items-center rounded-full border-4 border-white/70 bg-white/90 text-black disabled:opacity-40"
             >
               <Camera className="h-6 w-6" />
             </button>

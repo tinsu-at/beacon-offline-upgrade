@@ -36,6 +36,9 @@ export default defineConfig({
               cacheName: "beacon-pages",
               networkTimeoutSeconds: 4,
               expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              // Offline + never-visited route: show the offline shell instead
+              // of the browser's network error page.
+              precacheFallback: { fallbackURL: "/offline.html" },
             },
           },
           {
