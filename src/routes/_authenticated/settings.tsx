@@ -51,6 +51,7 @@ import {
   type PushStatus,
 } from "@/lib/push";
 import { TelegramSettingsCard } from "@/components/telegram-settings-card";
+import { isOnline, writeOrQueue } from "@/lib/offline";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — Beacon" }] }),
@@ -121,13 +122,24 @@ function SettingsPage() {
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
-    const { error } = await supabase
-      .from("profiles")
-      .update({ display_name: name })
-      .eq("id", user.id);
-    if (error) return toast.error(error.message);
-    toast.success("Profile updated");
-    qc.invalidateQueries({ queryKey: ["profile"] });
+    // Optimistic + offline-safe: the write is queued when there is no network.
+    qc.setQueryData(["profile", user.id], (prev: Record<string, unknown> | null | undefined) =>
+      prev ? { ...prev, display_name: name } : prev,
+    );
+    try {
+      const queued = await writeOrQueue({
+        table: "profiles",
+        type: "update",
+        rowId: user.id,
+        values: { display_name: name },
+        label: "Update profile name",
+      });
+      toast.success(queued ? "Saved offline — will sync later" : "Profile updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save profile");
+      return;
+    }
+    if (isOnline()) qc.invalidateQueries({ queryKey: ["profile"] });
   }
 
   function updatePref(key: NotifKey, patch: Partial<NotifPrefs[NotifKey]>) {

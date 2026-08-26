@@ -185,8 +185,8 @@ function SnippetView({ snippet }: { snippet: Snippet }) {
   const fence = `\`\`\`${snippet.language}\n${snippet.code}\n\`\`\``;
 
   return (
-    <Card className="rounded-3xl">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <Card className="flex min-h-0 flex-col rounded-3xl md:h-full">
+      <CardHeader className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <CardTitle className="font-serif text-lg">{snippet.title}</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">{snippet.description}</p>
@@ -206,7 +206,7 @@ function SnippetView({ snippet }: { snippet: Snippet }) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="min-h-0 flex-1 space-y-4 md:overflow-y-auto">
         <div className="overflow-hidden rounded-2xl border border-border">
           <Streamdown plugins={streamdownPlugins}>{fence}</Streamdown>
         </div>
