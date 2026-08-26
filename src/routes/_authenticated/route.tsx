@@ -17,9 +17,11 @@ import { AppLock } from "@/components/app-lock";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    // getSession() reads the persisted session from local storage, so the app
+    // still opens when the device is offline. getUser() would hit the network.
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.user) throw redirect({ to: "/auth" });
+    return { user: data.session.user };
   },
   component: Shell,
 });
@@ -30,7 +32,9 @@ function Shell() {
   const { theme, toggle } = useTheme();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
+    // Never bounce to /auth while offline: the cached session stays valid.
+    const online = typeof navigator === "undefined" || navigator.onLine;
+    if (!loading && !user && online) navigate({ to: "/auth" });
   }, [user, loading, navigate]);
 
   // Ask for notification permission once, on first launch.
