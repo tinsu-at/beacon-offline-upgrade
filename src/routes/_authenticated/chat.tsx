@@ -113,7 +113,7 @@ function ChatLayout() {
   );
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] w-full">
+    <div className="flex h-full min-h-0 w-full flex-1">
       {/* Threads sidebar (desktop) */}
       <aside className="hidden w-72 shrink-0 flex-col border-r border-border/60 bg-card/40 backdrop-blur md:flex">
         {threadList}

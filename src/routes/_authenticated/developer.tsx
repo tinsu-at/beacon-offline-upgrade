@@ -37,7 +37,7 @@ function DeveloperPage() {
   }, [query]);
 
   return (
-    <div className="flex w-full flex-col gap-4 px-3 py-4 md:h-[calc(100dvh-3.5rem)] md:px-6 md:py-6">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 px-3 py-4 md:px-6 md:py-6">
       <header className="flex items-center gap-3">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-soft">
           <Code2 className="h-5 w-5" />
@@ -50,8 +50,8 @@ function DeveloperPage() {
         </div>
       </header>
 
-      <div className="grid gap-4 md:min-h-0 md:flex-1 md:grid-cols-[300px_1fr]">
-        <aside className="space-y-3 md:min-h-0 md:overflow-y-auto md:pr-1">
+      <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[320px_1fr]">
+        <aside className="min-h-0 space-y-3 overflow-y-auto md:pr-1">
 
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -185,7 +185,7 @@ function SnippetView({ snippet }: { snippet: Snippet }) {
   const fence = `\`\`\`${snippet.language}\n${snippet.code}\n\`\`\``;
 
   return (
-    <Card className="flex min-h-0 flex-col rounded-3xl md:h-full">
+    <Card className="flex min-h-0 flex-col rounded-3xl md:h-full h-full">
       <CardHeader className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <CardTitle className="font-serif text-lg">{snippet.title}</CardTitle>
@@ -206,7 +206,7 @@ function SnippetView({ snippet }: { snippet: Snippet }) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="min-h-0 flex-1 space-y-4 md:overflow-y-auto">
+      <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto">
         <div className="overflow-hidden rounded-2xl border border-border">
           <Streamdown plugins={streamdownPlugins}>{fence}</Streamdown>
         </div>
