@@ -10,7 +10,6 @@ import {
   Compass,
   MessageCircle,
   Brain,
-  Camera,
   Code2,
   Send,
 } from "lucide-react";
@@ -39,7 +38,6 @@ export const NAV_ITEMS = [
   { title: "Goals", url: "/goals", icon: Target },
   { title: "Progress", url: "/progress", icon: TrendingUp },
   { title: "Telegram", url: "/telegram", icon: Send },
-  { title: "Camera", url: "/camera", icon: Camera },
   { title: "Developer", url: "/developer", icon: Code2 },
   { title: "Settings", url: "/settings", icon: Settings },
 ] as const;
