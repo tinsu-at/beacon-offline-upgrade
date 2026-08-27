@@ -227,7 +227,7 @@ function ChatWindow({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Conversation className="flex-1">
-        <ConversationContent className="mx-auto w-full max-w-3xl">
+        <ConversationContent className="mx-auto w-full max-w-5xl">
           {messages.length === 0 && (
             <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center">
               <div className="grid h-12 w-12 place-items-center rounded-2xl gradient-forest text-primary-foreground shadow-elegant">
@@ -289,7 +289,7 @@ function ChatWindow({
       </Conversation>
 
       <div className="border-t border-border/60 bg-background/70 px-4 py-4 backdrop-blur">
-        <div className="mx-auto w-full max-w-3xl">
+        <div className="mx-auto w-full max-w-5xl">
           <PromptInput onSubmit={handleSubmit}>
             <PromptInputTextarea
               ref={textareaRef}

@@ -188,8 +188,8 @@ export function fireNotification(key: NotifKey, pref: NotifPref) {
     }
     const n = new Notification(pref.title, {
       body: pref.body,
-      icon: "/icon-512.png",
-      badge: "/icon-512.png",
+      icon: "/notification-icon.png",
+      badge: "/notification-icon.png",
       tag: `beacon-${key}`,
       silent: pref.sound === false,
     });
