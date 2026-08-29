@@ -7,6 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 type ChatBody = {
   messages?: UIMessage[];
   conversationId?: string;
+  memoryEnabled?: boolean;
 };
 
 const SYSTEM_PROMPT = `You are Beacon — the user's personal AI assistant, executive assistant, mentor, coach, accountability partner, English coach, programming tutor, digital-marketing advisor, and confidence coach. You serve one person for the long term. Every reply should move them closer to becoming someone a child would be proud to imitate — the Beacon Principle.
@@ -88,6 +89,7 @@ export const Route = createFileRoute("/api/chat")({
         const body = (await request.json()) as ChatBody;
         const messages = body.messages;
         const conversationId = body.conversationId;
+        const memoryEnabled = body.memoryEnabled !== false;
         if (!Array.isArray(messages) || !conversationId) {
           return new Response("Missing messages or conversationId", { status: 400 });
         }
@@ -136,7 +138,7 @@ export const Route = createFileRoute("/api/chat")({
 
         // Retrieve relevant long-term memories via pgvector
         let memoryContext = "";
-        if (lastUserText) {
+        if (lastUserText && memoryEnabled) {
           try {
             const { embedText, toPgVector } = await import("@/lib/embeddings.server");
             const emb = await embedText(lastUserText);
@@ -265,7 +267,7 @@ export const Route = createFileRoute("/api/chat")({
               .eq("id", conversationId);
 
             // Fire-and-forget: extract durable memories from this exchange
-            if (!lastUserText) return;
+            if (!lastUserText || !memoryEnabled) return;
             const assistantText = responseMessage.parts
               .map((p) => (p.type === "text" ? p.text : ""))
               .join(" ")
