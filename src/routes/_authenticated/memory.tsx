@@ -1,12 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Brain, Plus } from "lucide-react";
-import { listMemories, addMemory, deleteMemory } from "@/lib/memory.functions";
+import { Trash2, Brain, Plus, Pencil, Check, X } from "lucide-react";
+import {
+  listMemories,
+  addMemory,
+  deleteMemory,
+  updateMemory,
+  clearMemories,
+} from "@/lib/memory.functions";
+import { isMemoryEnabled, setMemoryEnabled } from "@/lib/memory-settings";
+import { writeOrQueue, isOnline } from "@/lib/offline";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,7 +28,15 @@ import {
 
 export const Route = createFileRoute("/_authenticated/memory")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Memory — Beacon" }] }),
+  head: () => ({
+    meta: [
+      { title: "Memory — Beacon" },
+      {
+        name: "description",
+        content: "View, edit and manage the long-term memories Beacon keeps about you.",
+      },
+    ],
+  }),
   component: MemoryPage,
 });
 
@@ -36,41 +53,145 @@ const CATEGORIES = [
   "reflection",
 ] as const;
 
+type Category = (typeof CATEGORIES)[number];
+
+type MemoryRow = {
+  id: string;
+  content: string;
+  category: string;
+  source: string | null;
+  created_at: string;
+};
+
 function MemoryPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const list = useServerFn(listMemories);
   const add = useServerFn(addMemory);
   const del = useServerFn(deleteMemory);
+  const edit = useServerFn(updateMemory);
+  const clearAll = useServerFn(clearMemories);
 
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("fact");
+  const [category, setCategory] = useState<Category>("fact");
+  const [enabled, setEnabled] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editCategory, setEditCategory] = useState<Category>("fact");
 
-  const { data: memories, isLoading } = useQuery({
+  useEffect(() => setEnabled(isMemoryEnabled()), []);
+
+  const { data: memories, isLoading } = useQuery<MemoryRow[]>({
     queryKey: ["memories"],
     queryFn: () => list(),
+    // Keep the last known list readable offline (cache is persisted).
+    networkMode: "offlineFirst",
   });
 
+  const setCache = (fn: (rows: MemoryRow[]) => MemoryRow[]) =>
+    qc.setQueryData<MemoryRow[]>(["memories"], (rows) => fn(rows ?? []));
+
   const addMut = useMutation({
-    mutationFn: async () => add({ data: { content: content.trim(), category } }),
-    onSuccess: () => {
-      toast.success("Memory saved");
+    mutationFn: async () => {
+      const text = content.trim();
+      if (!isOnline()) {
+        const row: MemoryRow = {
+          id: crypto.randomUUID(),
+          content: text,
+          category,
+          source: "manual",
+          created_at: new Date().toISOString(),
+        };
+        await writeOrQueue({
+          label: "Save memory",
+          table: "memories",
+          type: "insert",
+          values: { id: row.id, user_id: user?.id, content: text, category, source: "manual" },
+        });
+        setCache((rows) => [row, ...rows]);
+        return { queued: true };
+      }
+      await add({ data: { content: text, category } });
+      return { queued: false };
+    },
+    onSuccess: ({ queued }) => {
+      toast.success(queued ? "Saved offline — will sync" : "Memory saved");
       setContent("");
-      qc.invalidateQueries({ queryKey: ["memories"] });
+      if (!queued) qc.invalidateQueries({ queryKey: ["memories"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const editMut = useMutation({
+    mutationFn: async (vars: { id: string; content: string; category: Category }) => {
+      if (!isOnline()) {
+        await writeOrQueue({
+          label: "Update memory",
+          table: "memories",
+          type: "update",
+          rowId: vars.id,
+          values: { content: vars.content, category: vars.category },
+        });
+        setCache((rows) =>
+          rows.map((r) =>
+            r.id === vars.id ? { ...r, content: vars.content, category: vars.category } : r,
+          ),
+        );
+        return { queued: true };
+      }
+      await edit({ data: vars });
+      return { queued: false };
+    },
+    onSuccess: ({ queued }) => {
+      toast.success(queued ? "Updated offline — will sync" : "Memory updated");
+      setEditingId(null);
+      if (!queued) qc.invalidateQueries({ queryKey: ["memories"] });
     },
     onError: (e) => toast.error((e as Error).message),
   });
 
   const delMut = useMutation({
-    mutationFn: async (id: string) => del({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Removed");
-      qc.invalidateQueries({ queryKey: ["memories"] });
+    mutationFn: async (id: string) => {
+      if (!isOnline()) {
+        await writeOrQueue({ label: "Delete memory", table: "memories", type: "delete", rowId: id });
+        setCache((rows) => rows.filter((r) => r.id !== id));
+        return { queued: true };
+      }
+      await del({ data: { id } });
+      return { queued: false };
+    },
+    onSuccess: ({ queued }) => {
+      toast.success(queued ? "Removed offline — will sync" : "Removed");
+      if (!queued) qc.invalidateQueries({ queryKey: ["memories"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const clearMut = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("Not signed in");
+      if (!isOnline()) {
+        await writeOrQueue({
+          label: "Clear all memories",
+          table: "memories",
+          type: "deleteWhere",
+          match: { user_id: user.id },
+        });
+        setCache(() => []);
+        return { queued: true };
+      }
+      await clearAll();
+      return { queued: false };
+    },
+    onSuccess: ({ queued }) => {
+      toast.success(queued ? "Cleared offline — will sync" : "All memories cleared");
+      if (!queued) qc.invalidateQueries({ queryKey: ["memories"] });
     },
     onError: (e) => toast.error((e as Error).message),
   });
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 md:px-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8 md:px-6">
       <div className="flex items-center gap-3">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl gradient-forest text-primary-foreground shadow-soft">
           <Brain className="h-5 w-5" />
@@ -84,6 +205,26 @@ function MemoryPage() {
       </div>
 
       <Card className="rounded-3xl">
+        <CardContent className="flex items-center justify-between gap-4 py-4">
+          <div>
+            <p className="text-sm font-medium">Long-term memory</p>
+            <p className="text-xs text-muted-foreground">
+              When off, Beacon stops saving new memories and ignores stored ones.
+            </p>
+          </div>
+          <Switch
+            checked={enabled}
+            onCheckedChange={(v) => {
+              setEnabled(v);
+              setMemoryEnabled(v);
+              toast.success(v ? "Memory on" : "Memory off");
+            }}
+            aria-label="Toggle long-term memory"
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-3xl">
         <CardHeader>
           <CardTitle className="font-serif text-lg">Add a memory</CardTitle>
         </CardHeader>
@@ -95,7 +236,7 @@ function MemoryPage() {
             rows={3}
           />
           <div className="flex flex-wrap items-center gap-3">
-            <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
+            <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
               <SelectTrigger className="w-40 rounded-full">
                 <SelectValue />
               </SelectTrigger>
@@ -119,10 +260,25 @@ function MemoryPage() {
       </Card>
 
       <Card className="rounded-3xl">
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
           <CardTitle className="font-serif text-lg">
             Stored memories {memories ? `(${memories.length})` : ""}
           </CardTitle>
+          {!!memories?.length && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full text-destructive"
+              disabled={clearMut.isPending}
+              onClick={() => {
+                if (confirm("Delete all stored memories? This cannot be undone.")) {
+                  clearMut.mutate();
+                }
+              }}
+            >
+              Clear all
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -136,25 +292,92 @@ function MemoryPage() {
               key={m.id}
               className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-card/60 p-3"
             >
-              <div className="flex-1">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] uppercase tracking-wide text-accent-foreground">
-                    {m.category}
-                  </span>
-                  {m.source && (
-                    <span className="text-[10px] text-muted-foreground">via {m.source}</span>
-                  )}
+              {editingId === m.id ? (
+                <div className="flex-1 space-y-2">
+                  <Textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    rows={3}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                      value={editCategory}
+                      onValueChange={(v) => setEditCategory(v as Category)}
+                    >
+                      <SelectTrigger className="w-36 rounded-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      className="rounded-full gap-1"
+                      disabled={editContent.trim().length < 3 || editMut.isPending}
+                      onClick={() =>
+                        editMut.mutate({
+                          id: m.id,
+                          content: editContent.trim(),
+                          category: editCategory,
+                        })
+                      }
+                    >
+                      <Check className="h-4 w-4" /> Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="rounded-full gap-1"
+                      onClick={() => setEditingId(null)}
+                    >
+                      <X className="h-4 w-4" /> Cancel
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-sm">{m.content}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => delMut.mutate(m.id)}
-                aria-label="Delete memory"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              ) : (
+                <>
+                  <div className="flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] uppercase tracking-wide text-accent-foreground">
+                        {m.category}
+                      </span>
+                      {m.source && (
+                        <span className="text-[10px] text-muted-foreground">via {m.source}</span>
+                      )}
+                    </div>
+                    <p className="text-sm">{m.content}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => {
+                        setEditingId(m.id);
+                        setEditContent(m.content);
+                        setEditCategory((CATEGORIES as readonly string[]).includes(m.category)
+                          ? (m.category as Category)
+                          : "fact");
+                      }}
+                      aria-label="Edit memory"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => delMut.mutate(m.id)}
+                      aria-label="Delete memory"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </CardContent>
