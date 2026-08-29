@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import { isMemoryEnabled } from "@/lib/memory-settings";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -124,7 +125,7 @@ function ChatWindow({
           const token = data.session?.access_token;
           return token ? { Authorization: `Bearer ${token}` } : {};
         },
-        body: () => ({ conversationId: threadId }),
+        body: () => ({ conversationId: threadId, memoryEnabled: isMemoryEnabled() }),
       }),
     [threadId],
   );

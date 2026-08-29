@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -243,6 +243,25 @@ function SettingsPage() {
                 Dark
               </Button>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-3xl">
+        <CardHeader>
+          <CardTitle className="font-serif text-lg">Memory</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-border p-4">
+            <div>
+              <p className="font-medium">Beacon's long-term memory</p>
+              <p className="text-xs text-muted-foreground">
+                View, edit, delete or clear what Beacon remembers — and turn memory on or off.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="outline" className="rounded-full">
+              <Link to="/memory">Open</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>

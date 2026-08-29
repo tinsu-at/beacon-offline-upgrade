@@ -51,11 +51,53 @@ export const addMemory = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateMemory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        content: z.string().min(3).max(2000),
+        category: z.enum(CATEGORIES),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { embedText, toPgVector } = await import("@/lib/embeddings.server");
+    let embedding: string | null = null;
+    try {
+      embedding = toPgVector(await embedText(data.content));
+    } catch {
+      embedding = null;
+    }
+    const { error } = await context.supabase
+      .from("memories")
+      .update({
+        content: data.content,
+        category: data.category,
+        ...(embedding ? { embedding: embedding as unknown as string } : {}),
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const deleteMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("memories").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const clearMemories = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { error } = await context.supabase
+      .from("memories")
+      .delete()
+      .eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
