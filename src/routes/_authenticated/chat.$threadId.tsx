@@ -124,7 +124,7 @@ function ChatWindow({
           const token = data.session?.access_token;
           return token ? { Authorization: `Bearer ${token}` } : {};
         },
-        body: () => ({ conversationId: threadId }),
+        body: () => ({ conversationId: threadId, memoryEnabled: isMemoryEnabled() }),
       }),
     [threadId],
   );
