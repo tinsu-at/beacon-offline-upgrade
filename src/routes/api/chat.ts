@@ -89,7 +89,10 @@ export const Route = createFileRoute("/api/chat")({
         const body = (await request.json()) as ChatBody;
         const messages = body.messages;
         const conversationId = body.conversationId;
-        const memoryEnabled = body.memoryEnabled !== false;
+        // Fail closed: memory work only happens when the client explicitly
+        // says the Long-Term Memory switch is ON. Any caller that omits the
+        // flag gets no retrieval and no background memory extraction.
+        const memoryEnabled = body.memoryEnabled === true;
         if (!Array.isArray(messages) || !conversationId) {
           return new Response("Missing messages or conversationId", { status: 400 });
         }
