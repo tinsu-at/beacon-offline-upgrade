@@ -32,6 +32,7 @@ export const addMemory = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) =>
     z
       .object({
+        id: z.string().uuid().optional(),
         content: z.string().min(3).max(2000),
         category: z.enum(CATEGORIES).default("fact"),
       })
@@ -39,17 +40,59 @@ export const addMemory = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { embedText, toPgVector } = await import("@/lib/embeddings.server");
-    const emb = await embedText(data.content);
-    const { error } = await context.supabase.from("memories").insert({
-      user_id: context.userId,
-      content: data.content,
-      category: data.category,
-      source: "manual",
-      embedding: toPgVector(emb) as unknown as string,
-    });
+    let embedding: string | null = null;
+    try {
+      embedding = toPgVector(await embedText(data.content));
+    } catch {
+      embedding = null;
+    }
+    const { data: row, error } = await context.supabase
+      .from("memories")
+      .insert({
+        ...(data.id ? { id: data.id } : {}),
+        user_id: context.userId,
+        content: data.content,
+        category: data.category,
+        source: "manual",
+        ...(embedding ? { embedding: embedding as unknown as string } : {}),
+      })
+      .select("id, content, category, source, created_at")
+      .single();
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return row;
   });
+
+/**
+ * Memories that landed through the offline outbox have no embedding, so they
+ * would never be retrieved in chat. Fill them in once the device is back online.
+ */
+export const embedMissingMemories = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("memories")
+      .select("id, content")
+      .is("embedding", null)
+      .limit(25);
+    if (error) throw new Error(error.message);
+    if (!rows?.length) return { embedded: 0 };
+    const { embedText, toPgVector } = await import("@/lib/embeddings.server");
+    let embedded = 0;
+    for (const row of rows) {
+      try {
+        const vec = toPgVector(await embedText(row.content));
+        await context.supabase
+          .from("memories")
+          .update({ embedding: vec as unknown as string })
+          .eq("id", row.id);
+        embedded++;
+      } catch {
+        // Skip; a later sync will retry.
+      }
+    }
+    return { embedded };
+  });
+
 
 export const updateMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
