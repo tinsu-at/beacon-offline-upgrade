@@ -120,8 +120,11 @@ export function mergeServerMemories(serverRows: LocalMemory[]): LocalMemory[] {
   for (const row of serverRows) {
     if (store.tombstones.includes(row.id)) continue; // pending offline delete
     const local = localById.get(row.id);
-    // A pending local edit wins until the outbox has flushed it.
-    merged.push(local?.pending ? { ...row, ...local, pending: true } : { ...row, pending: false });
+    // A pending local edit wins until the server reflects it; once the server
+    // content matches, the row is fully synced and stops being pending.
+    const stillPending =
+      !!local?.pending && (local.content !== row.content || local.category !== row.category);
+    merged.push(stillPending ? { ...row, ...local, pending: true } : { ...row, pending: false });
   }
   for (const local of store.rows) {
     if (!serverIds.has(local.id) && local.pending) merged.push(local);
