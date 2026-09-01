@@ -20,10 +20,16 @@ export function OfflineBanner() {
       if (synced) {
         toast.success(`Synced ${synced} offline change${synced === 1 ? "" : "s"}`);
         qc.invalidateQueries();
+        // Rows inserted through the outbox have no embedding yet; backfill them
+        // so offline-created memories are retrievable in chat.
+        void import("@/lib/memory.functions")
+          .then(({ embedMissingMemories }) => embedMissingMemories())
+          .catch(() => {});
       }
       if (failed) toast.error(`${failed} change${failed === 1 ? "" : "s"} could not sync yet`);
     });
   }, [qc]);
+
 
   if (s.online && !s.pending && !s.syncing) return null;
 
