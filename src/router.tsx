@@ -9,12 +9,17 @@ export const getRouter = () => {
         // Keep data around long enough to serve an offline session.
         gcTime: 1000 * 60 * 60 * 24 * 7,
         staleTime: 1000 * 30,
+        // Serve the persisted cache immediately instead of pausing/hanging
+        // while there is no connection.
+        networkMode: "offlineFirst",
         retry: (count) =>
           typeof navigator !== "undefined" && !navigator.onLine ? false : count < 2,
         refetchOnWindowFocus: false,
       },
+      mutations: { networkMode: "offlineFirst" },
     },
   });
+
 
   if (typeof window !== "undefined") {
     // Drop older cache versions: they may contain non-JSON-safe values

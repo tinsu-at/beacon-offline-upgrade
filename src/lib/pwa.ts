@@ -29,6 +29,35 @@ async function unregisterAppWorkers() {
   }
 }
 
+// Routes Beacon must be able to open with no connection at all. They are
+// fetched once after the first successful load so the service worker's
+// navigation cache holds a document for each of them before the device
+// goes offline.
+const WARM_ROUTES = [
+  "/",
+  "/dashboard",
+  "/chat",
+  "/memory",
+  "/journal",
+  "/goals",
+  "/habits",
+  "/tasks",
+  "/progress",
+  "/settings",
+  "/offline.html",
+];
+
+async function warmOfflineShell() {
+  if (typeof navigator === "undefined" || !navigator.onLine) return;
+  for (const route of WARM_ROUTES) {
+    try {
+      await fetch(route, { credentials: "same-origin", cache: "no-cache" });
+    } catch {
+      // A failed warm-up is harmless; the next launch retries.
+    }
+  }
+}
+
 export function initPwa() {
   if (typeof window === "undefined") return;
   if (isBlockedContext()) {
@@ -45,8 +74,13 @@ export function initPwa() {
   )
     .then(({ registerSW }) => {
       registerSW({ immediate: true });
+      // Wait until the worker controls the page, then prime the page cache.
+      void navigator.serviceWorker.ready.then(() => {
+        setTimeout(() => void warmOfflineShell(), 3000);
+      });
     })
     .catch(() => {
       // Plugin not available in this build; skip silently.
     });
 }
+

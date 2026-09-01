@@ -12,8 +12,17 @@ import {
   clearMemories,
 } from "@/lib/memory.functions";
 import { isMemoryEnabled, setMemoryEnabled } from "@/lib/memory-settings";
+import {
+  readLocalMemories,
+  mergeServerMemories,
+  addLocalMemory,
+  updateLocalMemory,
+  removeLocalMemory,
+  clearLocalMemories,
+} from "@/lib/memory-local";
 import { writeOrQueue, isOnline } from "@/lib/offline";
 import { useAuth } from "@/lib/auth";
+
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -83,35 +92,46 @@ function MemoryPage() {
 
   const { data: memories, isLoading } = useQuery<MemoryRow[]>({
     queryKey: ["memories"],
-    queryFn: () => list(),
-    // Keep the last known list readable offline (cache is persisted).
+    // Offline (or when the server is unreachable) fall back to the on-device
+    // store so memories created offline never disappear.
+    queryFn: async () => {
+      if (!isOnline()) return readLocalMemories();
+      try {
+        const rows = (await list()) as MemoryRow[];
+        return mergeServerMemories(rows);
+      } catch {
+        return readLocalMemories();
+      }
+    },
+    initialData: () => readLocalMemories(),
     networkMode: "offlineFirst",
   });
 
-  const setCache = (fn: (rows: MemoryRow[]) => MemoryRow[]) =>
-    qc.setQueryData<MemoryRow[]>(["memories"], (rows) => fn(rows ?? []));
+  const setRows = (rows: MemoryRow[]) => qc.setQueryData<MemoryRow[]>(["memories"], rows);
 
   const addMut = useMutation({
     mutationFn: async () => {
       const text = content.trim();
+      const id = crypto.randomUUID();
+      const row: MemoryRow = {
+        id,
+        content: text,
+        category,
+        source: "manual",
+        created_at: new Date().toISOString(),
+      };
       if (!isOnline()) {
-        const row: MemoryRow = {
-          id: crypto.randomUUID(),
-          content: text,
-          category,
-          source: "manual",
-          created_at: new Date().toISOString(),
-        };
         await writeOrQueue({
           label: "Save memory",
           table: "memories",
           type: "insert",
-          values: { id: row.id, user_id: user?.id, content: text, category, source: "manual" },
+          values: { id, user_id: user?.id, content: text, category, source: "manual" },
         });
-        setCache((rows) => [row, ...rows]);
+        setRows(addLocalMemory({ ...row, pending: true }));
         return { queued: true };
       }
-      await add({ data: { content: text, category } });
+      await add({ data: { id, content: text, category } });
+      setRows(addLocalMemory(row));
       return { queued: false };
     },
     onSuccess: ({ queued }) => {
@@ -132,14 +152,13 @@ function MemoryPage() {
           rowId: vars.id,
           values: { content: vars.content, category: vars.category },
         });
-        setCache((rows) =>
-          rows.map((r) =>
-            r.id === vars.id ? { ...r, content: vars.content, category: vars.category } : r,
-          ),
+        setRows(
+          updateLocalMemory(vars.id, { content: vars.content, category: vars.category }, true),
         );
         return { queued: true };
       }
       await edit({ data: vars });
+      setRows(updateLocalMemory(vars.id, { content: vars.content, category: vars.category }));
       return { queued: false };
     },
     onSuccess: ({ queued }) => {
@@ -154,10 +173,11 @@ function MemoryPage() {
     mutationFn: async (id: string) => {
       if (!isOnline()) {
         await writeOrQueue({ label: "Delete memory", table: "memories", type: "delete", rowId: id });
-        setCache((rows) => rows.filter((r) => r.id !== id));
+        setRows(removeLocalMemory(id));
         return { queued: true };
       }
       await del({ data: { id } });
+      setRows(removeLocalMemory(id, false));
       return { queued: false };
     },
     onSuccess: ({ queued }) => {
@@ -177,10 +197,11 @@ function MemoryPage() {
           type: "deleteWhere",
           match: { user_id: user.id },
         });
-        setCache(() => []);
+        setRows(clearLocalMemories());
         return { queued: true };
       }
       await clearAll();
+      setRows(clearLocalMemories(false));
       return { queued: false };
     },
     onSuccess: ({ queued }) => {
@@ -189,6 +210,7 @@ function MemoryPage() {
     },
     onError: (e) => toast.error((e as Error).message),
   });
+
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8 md:px-6">
