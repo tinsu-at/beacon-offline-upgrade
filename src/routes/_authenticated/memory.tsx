@@ -12,8 +12,17 @@ import {
   clearMemories,
 } from "@/lib/memory.functions";
 import { isMemoryEnabled, setMemoryEnabled } from "@/lib/memory-settings";
+import {
+  readLocalMemories,
+  mergeServerMemories,
+  addLocalMemory,
+  updateLocalMemory,
+  removeLocalMemory,
+  clearLocalMemories,
+} from "@/lib/memory-local";
 import { writeOrQueue, isOnline } from "@/lib/offline";
 import { useAuth } from "@/lib/auth";
+
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
