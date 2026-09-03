@@ -306,6 +306,38 @@ export type Database = {
         }
         Relationships: []
       }
+      memory_shares: {
+        Row: {
+          created_at: string
+          id: string
+          memory_id: string
+          owner_id: string
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          memory_id: string
+          owner_id: string
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          memory_id?: string
+          owner_id?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_shares_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milestones: {
         Row: {
           completed: boolean
@@ -346,25 +378,52 @@ export type Database = {
       }
       profiles: {
         Row: {
+          about_me: string | null
           avatar_url: string | null
           created_at: string
           display_name: string | null
           id: string
+          improvement_areas: string | null
+          main_goals: string | null
+          memory_enabled: boolean
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
+          preferences: Json
+          purpose: string | null
           updated_at: string
+          why_beacon: string | null
         }
         Insert: {
+          about_me?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           id: string
+          improvement_areas?: string | null
+          main_goals?: string | null
+          memory_enabled?: boolean
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          preferences?: Json
+          purpose?: string | null
           updated_at?: string
+          why_beacon?: string | null
         }
         Update: {
+          about_me?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
+          improvement_areas?: string | null
+          main_goals?: string | null
+          memory_enabled?: boolean
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          preferences?: Json
+          purpose?: string | null
           updated_at?: string
+          why_beacon?: string | null
         }
         Relationships: []
       }
