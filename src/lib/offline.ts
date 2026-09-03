@@ -3,6 +3,7 @@
 // because the React Query cache is persisted to localStorage (see router.tsx).
 
 import { supabase } from "@/integrations/supabase/client";
+import { scopedKey } from "@/lib/user-scope";
 
 export type OutboxOp =
   | {
@@ -35,7 +36,8 @@ export type OutboxOp =
 type DistributiveOmit<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never;
 export type NewOutboxOp = DistributiveOmit<OutboxOp, "id" | "at">;
 
-const KEY = "beacon-outbox-v1";
+const BASE = "beacon-outbox-v1";
+const KEY = () => scopedKey(BASE);
 
 type State = {
   online: boolean;
@@ -73,14 +75,14 @@ export function offlineState(): State {
 function readQueue(): OutboxOp[] {
   if (typeof localStorage === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "[]") as OutboxOp[];
+    return JSON.parse(localStorage.getItem(KEY()) ?? "[]") as OutboxOp[];
   } catch {
     return [];
   }
 }
 
 function writeQueue(q: OutboxOp[]) {
-  localStorage.setItem(KEY, JSON.stringify(q));
+  localStorage.setItem(KEY(), JSON.stringify(q));
   emit();
 }
 

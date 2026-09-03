@@ -7,6 +7,8 @@
 // yet, so an offline memory survives closing and reopening the app and is
 // merged — never duplicated — once the outbox syncs.
 
+import { scopedKey } from "@/lib/user-scope";
+
 export type LocalMemory = {
   id: string;
   content: string;
@@ -23,7 +25,8 @@ type Store = {
   tombstones: string[];
 };
 
-const KEY = "beacon-memories-v1";
+const BASE = "beacon-memories-v1";
+const KEY = () => scopedKey(BASE);
 
 function emptyStore(): Store {
   return { rows: [], tombstones: [] };
@@ -32,7 +35,7 @@ function emptyStore(): Store {
 function read(): Store {
   if (typeof localStorage === "undefined") return emptyStore();
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY());
     if (!raw) return emptyStore();
     const parsed = JSON.parse(raw) as Partial<Store>;
     return {
@@ -47,7 +50,7 @@ function read(): Store {
 function write(store: Store) {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(store));
+    localStorage.setItem(KEY(), JSON.stringify(store));
   } catch {
     // Storage full or unavailable — keep the in-memory list working.
   }

@@ -306,6 +306,38 @@ export type Database = {
         }
         Relationships: []
       }
+      memory_shares: {
+        Row: {
+          created_at: string
+          id: string
+          memory_id: string
+          owner_id: string
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          memory_id: string
+          owner_id: string
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          memory_id?: string
+          owner_id?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_shares_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milestones: {
         Row: {
           completed: boolean
@@ -346,25 +378,52 @@ export type Database = {
       }
       profiles: {
         Row: {
+          about_me: string | null
           avatar_url: string | null
           created_at: string
           display_name: string | null
           id: string
+          improvement_areas: string | null
+          main_goals: string | null
+          memory_enabled: boolean
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
+          preferences: Json
+          purpose: string | null
           updated_at: string
+          why_beacon: string | null
         }
         Insert: {
+          about_me?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           id: string
+          improvement_areas?: string | null
+          main_goals?: string | null
+          memory_enabled?: boolean
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          preferences?: Json
+          purpose?: string | null
           updated_at?: string
+          why_beacon?: string | null
         }
         Update: {
+          about_me?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
+          improvement_areas?: string | null
+          main_goals?: string | null
+          memory_enabled?: boolean
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          preferences?: Json
+          purpose?: string | null
           updated_at?: string
+          why_beacon?: string | null
         }
         Relationships: []
       }
@@ -407,6 +466,164 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_customers: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          handled_while_sleeping: boolean
+          handoff_reason: string | null
+          id: string
+          last_interaction: string
+          notes: string | null
+          owner_id: string
+          state: Database["public"]["Enums"]["telegram_conv_state"]
+          status: string
+          telegram_chat_id: number
+          telegram_user_id: number | null
+          telegram_username: string | null
+          updated_at: string
+          waiting_for_human: boolean
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          handled_while_sleeping?: boolean
+          handoff_reason?: string | null
+          id?: string
+          last_interaction?: string
+          notes?: string | null
+          owner_id: string
+          state?: Database["public"]["Enums"]["telegram_conv_state"]
+          status?: string
+          telegram_chat_id: number
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          updated_at?: string
+          waiting_for_human?: boolean
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          handled_while_sleeping?: boolean
+          handoff_reason?: string | null
+          id?: string
+          last_interaction?: string
+          notes?: string | null
+          owner_id?: string
+          state?: Database["public"]["Enums"]["telegram_conv_state"]
+          status?: string
+          telegram_chat_id?: number
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          updated_at?: string
+          waiting_for_human?: boolean
+        }
+        Relationships: []
+      }
+      telegram_messages: {
+        Row: {
+          created_at: string
+          customer_id: string
+          direction: string
+          id: string
+          owner_id: string
+          sender: string
+          text: string | null
+          update_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          direction: string
+          id?: string
+          owner_id: string
+          sender: string
+          text?: string | null
+          update_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          direction?: string
+          id?: string
+          owner_id?: string
+          sender?: string
+          text?: string | null
+          update_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_messages_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_settings: {
+        Row: {
+          automation_enabled: boolean
+          bot_id: number | null
+          bot_username: string | null
+          connected: boolean
+          connected_at: string | null
+          created_at: string
+          sleeping_mode: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          automation_enabled?: boolean
+          bot_id?: number | null
+          bot_username?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          sleeping_mode?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          automation_enabled?: boolean
+          bot_id?: number | null
+          bot_username?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          sleeping_mode?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      telegram_style_examples: {
+        Row: {
+          created_at: string
+          customer_message: string
+          id: string
+          owner_id: string
+          owner_reply: string
+          tag: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_message: string
+          id?: string
+          owner_id: string
+          owner_reply: string
+          tag?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_message?: string
+          id?: string
+          owner_id?: string
+          owner_reply?: string
+          tag?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -424,7 +641,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      telegram_conv_state: "BEACON_ACTIVE" | "HUMAN_TAKEOVER"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -551,6 +768,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      telegram_conv_state: ["BEACON_ACTIVE", "HUMAN_TAKEOVER"],
+    },
   },
 } as const
