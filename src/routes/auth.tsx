@@ -166,3 +166,84 @@ function ForgotForm() {
     </form>
   );
 }
+
+function SignUpForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password.length < 8) return toast.error("Use at least 8 characters");
+    if (password !== confirm) return toast.error("Passwords don't match");
+    setBusy(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/onboarding` },
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    if (!data.session) {
+      setSent(true);
+      return toast.success("Check your email to confirm your account");
+    }
+    toast.success("Welcome to Beacon");
+    navigate({ to: "/onboarding" });
+  }
+
+  if (sent) {
+    return (
+      <div className="space-y-3 text-center">
+        <h2 className="font-serif text-xl font-semibold">Confirm your email</h2>
+        <p className="text-sm text-muted-foreground">
+          We sent a confirmation link to {email}. Open it to finish creating your account.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <h2 className="font-serif text-xl font-semibold">Create your account</h2>
+      <div className="space-y-1.5">
+        <Label htmlFor="up-email">Email</Label>
+        <Input
+          id="up-email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="up-pass">Password</Label>
+        <Input
+          id="up-pass"
+          type="password"
+          required
+          minLength={8}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="up-pass2">Confirm password</Label>
+        <Input
+          id="up-pass2"
+          type="password"
+          required
+          minLength={8}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
+      </div>
+      <Button type="submit" disabled={busy} className="w-full rounded-full">
+        {busy ? "Creating account..." : "Create account"}
+      </Button>
+    </form>
+  );
+}
