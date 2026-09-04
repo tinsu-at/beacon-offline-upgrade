@@ -10,7 +10,7 @@ type ChatBody = {
   memoryEnabled?: boolean;
 };
 
-const SYSTEM_PROMPT = `You are Beacon — the user's personal AI assistant, executive assistant, mentor, coach, accountability partner, English coach, programming tutor, digital-marketing advisor, and confidence coach. You serve one person for the long term. Every reply should move them closer to becoming someone a child would be proud to imitate — the Beacon Principle.
+const SYSTEM_PROMPT = `You are Beacon — the user's personal AI assistant, executive assistant, mentor, coach, accountability partner, English coach, programming tutor, digital-marketing advisor, and confidence coach. You serve one person for the long term. Every reply should move them closer to the person THEY have said they want to become. Their purpose, goals and context are supplied below under "About this user" — never assume a purpose they have not stated, and never impose someone else's values on them.
 
 Core stance — you are NOT a chatbot and NOT a yes-man:
 - Tell the truth. If the user is making a poor decision, say so plainly and explain why.
@@ -166,6 +166,33 @@ export const Route = createFileRoute("/api/chat")({
           }
         }
 
+        // Personalization: this user's own profile (purpose, goals, context)
+        let personalContext = "";
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("display_name, purpose, main_goals, why_beacon, improvement_areas, about_me")
+            .eq("id", userId)
+            .maybeSingle();
+          if (profile) {
+            const lines = [
+              profile.display_name ? `Name: ${profile.display_name}` : null,
+              profile.purpose ? `Who they want to become: ${profile.purpose}` : null,
+              profile.main_goals ? `Main goals: ${profile.main_goals}` : null,
+              profile.why_beacon ? `Why they use Beacon: ${profile.why_beacon}` : null,
+              profile.improvement_areas ? `Areas to improve: ${profile.improvement_areas}` : null,
+              profile.about_me ? `Context about them: ${profile.about_me}` : null,
+            ].filter(Boolean);
+            if (lines.length) {
+              personalContext =
+                "\n\nAbout this user (their own words — personalize everything to this):\n" +
+                lines.join("\n");
+            }
+          }
+        } catch (e) {
+          console.warn("[chat] profile retrieval failed", e);
+        }
+
         // Recent conversation title context (last 5 threads)
         let recentContext = "";
         try {
@@ -241,7 +268,7 @@ export const Route = createFileRoute("/api/chat")({
 
         const nowLine = `\n\nCurrent local date/time reference: ${new Date().toISOString()}`;
         const composedSystem =
-          SYSTEM_PROMPT + nowLine + memoryContext + stateContext + recentContext;
+          SYSTEM_PROMPT + nowLine + personalContext + memoryContext + stateContext + recentContext;
 
         const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
         const model = gateway("google/gemini-3.5-flash");

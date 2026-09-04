@@ -29,12 +29,18 @@ function renderEntries(entries: JournalEntryForAi[]) {
     .slice(0, 40000);
 }
 
-export async function generateJournalInsights(entries: JournalEntryForAi[]): Promise<string> {
+export async function generateJournalInsights(
+  entries: JournalEntryForAi[],
+  personalContext?: string,
+): Promise<string> {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) throw new Error("Missing LOVABLE_API_KEY");
 
   const prompt = [
     "You are Beacon, a warm but direct personal growth coach.",
+    personalContext
+      ? `Personalize everything to this user, in their own words:\n${personalContext}`
+      : "You have no profile for this user yet — do not assume their values or purpose.",
     "Read the user's recent journal entries and daily reflection answers, then reply in markdown with exactly these four short sections:",
     "## Summary — 2-4 sentences summarising the period.",
     "## Recurring themes — 3-5 bullets naming patterns you notice.",

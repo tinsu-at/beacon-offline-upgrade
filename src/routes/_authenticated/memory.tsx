@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Brain, Plus, Pencil, Check, X } from "lucide-react";
+import { Trash2, Brain, Plus, Pencil, Check, X, Share2, Copy } from "lucide-react";
 import {
   listMemories,
   addMemory,
@@ -21,6 +21,12 @@ import {
   clearLocalMemories,
 } from "@/lib/memory-local";
 import { writeOrQueue, isOnline } from "@/lib/offline";
+import {
+  listMyShares,
+  listSharedWithMe,
+  shareMemory,
+  revokeShare,
+} from "@/lib/memory-shares.functions";
 import { useAuth } from "@/lib/auth";
 
 import { Button } from "@/components/ui/button";
@@ -80,6 +86,10 @@ function MemoryPage() {
   const del = useServerFn(deleteMemory);
   const edit = useServerFn(updateMemory);
   const clearAll = useServerFn(clearMemories);
+  const myShares = useServerFn(listMyShares);
+  const sharedWithMe = useServerFn(listSharedWithMe);
+  const share = useServerFn(shareMemory);
+  const revoke = useServerFn(revokeShare);
 
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<Category>("fact");
@@ -106,6 +116,50 @@ function MemoryPage() {
     initialData: () => readLocalMemories(),
     networkMode: "offlineFirst",
   });
+
+  const { data: shares } = useQuery({
+    queryKey: ["memory-shares"],
+    queryFn: () => myShares(),
+    enabled: isOnline(),
+    retry: false,
+  });
+
+  const { data: received } = useQuery({
+    queryKey: ["memory-shares-received"],
+    queryFn: () => sharedWithMe(),
+    enabled: isOnline(),
+    retry: false,
+  });
+
+  const shareMut = useMutation({
+    mutationFn: (vars: { memoryId: string; recipientId: string }) => share({ data: vars }),
+    onSuccess: () => {
+      toast.success("Memory shared");
+      qc.invalidateQueries({ queryKey: ["memory-shares"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const revokeMut = useMutation({
+    mutationFn: (id: string) => revoke({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Sharing revoked");
+      qc.invalidateQueries({ queryKey: ["memory-shares"] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  function promptShare(memoryId: string) {
+    if (!isOnline()) {
+      toast.error("Sharing needs a connection.");
+      return;
+    }
+    const recipientId = window
+      .prompt("Paste the Beacon user ID of the person you want to share this memory with:")
+      ?.trim();
+    if (!recipientId) return;
+    shareMut.mutate({ memoryId, recipientId });
+  }
 
   const setRows = (rows: MemoryRow[]) => qc.setQueryData<MemoryRow[]>(["memories"], rows);
 
@@ -392,6 +446,14 @@ function MemoryPage() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
+                      onClick={() => promptShare(m.id)}
+                      aria-label="Share memory"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => delMut.mutate(m.id)}
                       aria-label="Delete memory"
                     >
@@ -402,6 +464,70 @@ function MemoryPage() {
               )}
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-3xl">
+        <CardHeader>
+          <CardTitle className="font-serif text-lg">Sharing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-2xl border border-border bg-card/60 p-3">
+            <p className="text-xs text-muted-foreground">
+              Memories are private by default. Share one only if you choose to — the recipient sees
+              nothing else, and you can revoke it at any time.
+            </p>
+            {user?.id && (
+              <div className="mt-2 flex items-center gap-2">
+                <code className="truncate rounded-full bg-accent px-2 py-1 text-[11px]">
+                  {user.id}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Copy my Beacon user ID"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(user.id);
+                    toast.success("Your Beacon user ID is copied");
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Shared by you ({shares?.length ?? 0})</p>
+            {shares?.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/60 p-3"
+              >
+                <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                  {memories?.find((m) => m.id === s.memory_id)?.content ?? s.memory_id} → {s.recipient_id}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full text-destructive"
+                  onClick={() => revokeMut.mutate(s.id)}
+                >
+                  Revoke
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Shared with you ({received?.length ?? 0})</p>
+            {received?.map((s) => (
+              <div key={s.id} className="rounded-2xl border border-border bg-card/60 p-3">
+                <p className="text-sm">{s.memories?.content}</p>
+                <p className="text-[10px] text-muted-foreground">from {s.owner_id}</p>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

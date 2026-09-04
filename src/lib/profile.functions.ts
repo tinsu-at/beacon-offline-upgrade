@@ -41,8 +41,11 @@ export const updateProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => profileInput.parse(i))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = { ...data, id: context.userId };
-    if (data.onboarding_completed) patch['onboarding_completed_at'] = new Date().toISOString();
+    const patch = {
+      ...data,
+      id: context.userId,
+      ...(data.onboarding_completed ? { onboarding_completed_at: new Date().toISOString() } : {}),
+    };
     const { data: row, error } = await context.supabase
       .from("profiles")
       .upsert(patch, { onConflict: "id" })
