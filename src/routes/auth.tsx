@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-const searchSchema = z.object({ mode: z.enum(["signin", "forgot"]).optional() });
+const searchSchema = z.object({ mode: z.enum(["signin", "signup", "forgot"]).optional() });
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s) => searchSchema.parse(s),
@@ -41,20 +41,41 @@ function AuthPage() {
 
           <div className="rounded-3xl border border-border bg-card p-6 shadow-elegant md:p-8">
             <Tabs value={tab} onValueChange={setTab}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="signin">Sign in</TabsTrigger>
+                <TabsTrigger value="signup">Sign up</TabsTrigger>
                 <TabsTrigger value="forgot">Reset</TabsTrigger>
               </TabsList>
               <TabsContent value="signin" className="mt-6">
                 <SignInForm />
+                <p className="mt-4 text-center text-sm text-muted-foreground">
+                  New to Beacon?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setTab("signup")}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Create an account
+                  </button>
+                </p>
+              </TabsContent>
+              <TabsContent value="signup" className="mt-6">
+                <SignUpForm />
+                <p className="mt-4 text-center text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setTab("signin")}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Sign in
+                  </button>
+                </p>
               </TabsContent>
               <TabsContent value="forgot" className="mt-6">
                 <ForgotForm />
               </TabsContent>
             </Tabs>
-            <p className="mt-6 text-center text-xs text-muted-foreground">
-              Beacon is a private, single-user companion. New sign-ups are disabled.
-            </p>
           </div>
         </div>
       </div>
@@ -141,6 +162,87 @@ function ForgotForm() {
       </div>
       <Button type="submit" disabled={busy} className="w-full rounded-full">
         {busy ? "Sending..." : "Send reset link"}
+      </Button>
+    </form>
+  );
+}
+
+function SignUpForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password.length < 8) return toast.error("Use at least 8 characters");
+    if (password !== confirm) return toast.error("Passwords don't match");
+    setBusy(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/onboarding` },
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    if (!data.session) {
+      setSent(true);
+      return toast.success("Check your email to confirm your account");
+    }
+    toast.success("Welcome to Beacon");
+    navigate({ to: "/onboarding" });
+  }
+
+  if (sent) {
+    return (
+      <div className="space-y-3 text-center">
+        <h2 className="font-serif text-xl font-semibold">Confirm your email</h2>
+        <p className="text-sm text-muted-foreground">
+          We sent a confirmation link to {email}. Open it to finish creating your account.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <h2 className="font-serif text-xl font-semibold">Create your account</h2>
+      <div className="space-y-1.5">
+        <Label htmlFor="up-email">Email</Label>
+        <Input
+          id="up-email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="up-pass">Password</Label>
+        <Input
+          id="up-pass"
+          type="password"
+          required
+          minLength={8}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="up-pass2">Confirm password</Label>
+        <Input
+          id="up-pass2"
+          type="password"
+          required
+          minLength={8}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
+      </div>
+      <Button type="submit" disabled={busy} className="w-full rounded-full">
+        {busy ? "Creating account..." : "Create account"}
       </Button>
     </form>
   );
