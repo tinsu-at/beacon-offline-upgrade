@@ -14,6 +14,22 @@ export const journalInsights = createServerFn({ method: "POST" })
     if (!data || data.length === 0) {
       return { insights: "", empty: true as const };
     }
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("purpose, main_goals, improvement_areas, about_me")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const personalContext = profile
+      ? [
+          profile.purpose ? `Who they want to become: ${profile.purpose}` : null,
+          profile.main_goals ? `Main goals: ${profile.main_goals}` : null,
+          profile.improvement_areas ? `Areas to improve: ${profile.improvement_areas}` : null,
+          profile.about_me ? `Context: ${profile.about_me}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
     const { generateJournalInsights } = await import("@/lib/journal-insights.server");
     const insights = await generateJournalInsights(
       data.map((e) => {
@@ -28,6 +44,7 @@ export const journalInsights = createServerFn({ method: "POST" })
           ),
         };
       }),
+      personalContext || undefined,
     );
     return { insights, empty: false as const };
   });
