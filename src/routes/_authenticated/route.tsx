@@ -1,6 +1,10 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { setActiveUserId } from "@/lib/user-scope";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getProfile } from "@/lib/profile.functions";
 import { useAuth } from "@/lib/auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileNav } from "@/components/mobile-nav";
@@ -21,6 +25,7 @@ export const Route = createFileRoute("/_authenticated")({
     // still opens when the device is offline. getUser() would hit the network.
     const { data } = await supabase.auth.getSession();
     if (!data.session?.user) throw redirect({ to: "/auth" });
+    setActiveUserId(data.session.user.id);
     return { user: data.session.user };
   },
   component: Shell,
@@ -30,6 +35,23 @@ function Shell() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
+  const loadProfile = useServerFn(getProfile);
+
+  // First-time users get the short onboarding questionnaire (online only —
+  // offline sessions keep working exactly as before).
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => loadProfile(),
+    enabled: !!user,
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!profile || profile.onboarding_completed) return;
+    if (typeof window !== "undefined" && window.location.pathname === "/onboarding") return;
+    navigate({ to: "/onboarding", replace: true });
+  }, [profile, navigate]);
 
   useEffect(() => {
     // Never bounce to /auth while offline: the cached session stays valid.

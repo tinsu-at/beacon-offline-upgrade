@@ -10,6 +10,7 @@ import {
   Compass,
   MessageCircle,
   Brain,
+  UserRound,
   Code2,
   Send,
 } from "lucide-react";
@@ -32,6 +33,7 @@ export const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Chat", url: "/chat", icon: MessageCircle },
   { title: "Memory", url: "/memory", icon: Brain },
+  { title: "Profile", url: "/profile", icon: UserRound },
   { title: "Tasks", url: "/tasks", icon: CheckSquare },
   { title: "Habits", url: "/habits", icon: Flame },
   { title: "Journal", url: "/journal", icon: BookText },
