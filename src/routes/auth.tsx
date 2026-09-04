@@ -41,20 +41,41 @@ function AuthPage() {
 
           <div className="rounded-3xl border border-border bg-card p-6 shadow-elegant md:p-8">
             <Tabs value={tab} onValueChange={setTab}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="signin">Sign in</TabsTrigger>
+                <TabsTrigger value="signup">Sign up</TabsTrigger>
                 <TabsTrigger value="forgot">Reset</TabsTrigger>
               </TabsList>
               <TabsContent value="signin" className="mt-6">
                 <SignInForm />
+                <p className="mt-4 text-center text-sm text-muted-foreground">
+                  New to Beacon?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setTab("signup")}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Create an account
+                  </button>
+                </p>
+              </TabsContent>
+              <TabsContent value="signup" className="mt-6">
+                <SignUpForm />
+                <p className="mt-4 text-center text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setTab("signin")}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Sign in
+                  </button>
+                </p>
               </TabsContent>
               <TabsContent value="forgot" className="mt-6">
                 <ForgotForm />
               </TabsContent>
             </Tabs>
-            <p className="mt-6 text-center text-xs text-muted-foreground">
-              Beacon is a private, single-user companion. New sign-ups are disabled.
-            </p>
           </div>
         </div>
       </div>
