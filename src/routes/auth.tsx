@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-const searchSchema = z.object({ mode: z.enum(["signin", "forgot"]).optional() });
+const searchSchema = z.object({ mode: z.enum(["signin", "signup", "forgot"]).optional() });
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s) => searchSchema.parse(s),
