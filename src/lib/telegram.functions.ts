@@ -52,7 +52,8 @@ export const getTelegramStatus = createServerFn({ method: "GET" })
 
 export const testTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
+  .handler(async ({ context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { getMe, hasBotToken, telegramApi } = await import("@/lib/telegram.server");
     if (!hasBotToken()) {
       return { ok: false as const, error: "TELEGRAM_BOT_TOKEN is not configured." };
@@ -71,6 +72,7 @@ export const testTelegram = createServerFn({ method: "POST" })
 export const connectTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { getMe, getBotToken, webhookSecret, telegramApi, publicBaseUrl, hasBotToken } =
       await import("@/lib/telegram.server");
     if (!hasBotToken()) {
@@ -105,6 +107,7 @@ export const connectTelegram = createServerFn({ method: "POST" })
 export const disconnectTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { telegramApi } = await import("@/lib/telegram.server");
     const res = await telegramApi("deleteWebhook", { drop_pending_updates: false });
     await context.supabase
@@ -125,6 +128,7 @@ export const updateTelegramSettings = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const patch: Record<string, boolean> = {};
     if (data.automationEnabled !== undefined) patch["automation_enabled"] = data.automationEnabled;
     if (data.sleepingMode !== undefined) patch["sleeping_mode"] = data.sleepingMode;
@@ -138,6 +142,7 @@ export const updateTelegramSettings = createServerFn({ method: "POST" })
 export const listTelegramCustomers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { data, error } = await context.supabase
       .from("telegram_customers")
       .select(
@@ -153,6 +158,7 @@ export const getTelegramConversation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ customerId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { data: rows, error } = await context.supabase
       .from("telegram_messages")
       .select("id, sender, direction, text, created_at")
@@ -174,6 +180,7 @@ export const setConversationState = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { error } = await context.supabase
       .from("telegram_customers")
       .update({
@@ -192,6 +199,7 @@ export const sendTelegramReply = createServerFn({ method: "POST" })
     z.object({ customerId: z.string().uuid(), text: z.string().min(1).max(3500) }).parse(i),
   )
   .handler(async ({ data, context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { data: customer, error: cErr } = await context.supabase
       .from("telegram_customers")
       .select("id, telegram_chat_id")
@@ -220,6 +228,7 @@ export const sendTelegramReply = createServerFn({ method: "POST" })
 export const listStyleExamples = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { data, error } = await context.supabase
       .from("telegram_style_examples")
       .select("id, customer_message, owner_reply, tag, created_at")
@@ -241,6 +250,7 @@ export const addStyleExample = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { error } = await context.supabase.from("telegram_style_examples").insert({
       owner_id: context.userId,
       customer_message: data.customerMessage,
@@ -255,6 +265,7 @@ export const deleteStyleExample = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const { error } = await context.supabase
       .from("telegram_style_examples")
       .delete()
@@ -267,6 +278,7 @@ export const deleteStyleExample = createServerFn({ method: "POST" })
 export const getOvernightSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!(await telegramAllowed(context))) throw new Error(NOT_ALLOWED);
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: customers, error } = await context.supabase
       .from("telegram_customers")
