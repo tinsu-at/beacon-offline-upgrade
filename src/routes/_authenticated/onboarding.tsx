@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
-import { getProfile, updateProfile } from "@/lib/profile.functions";
+import { generateSlogan, getProfile, updateProfile } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,6 +66,7 @@ function OnboardingPage() {
   const qc = useQueryClient();
   const load = useServerFn(getProfile);
   const save = useServerFn(updateProfile);
+  const makeSlogan = useServerFn(generateSlogan);
 
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: () => load() });
   const [answers, setAnswers] = useState<Answers>({
@@ -96,6 +97,13 @@ function OnboardingPage() {
           ? { onboarding_completed: true }
           : { ...answers, onboarding_completed: true },
       });
+      if (!skip) {
+        try {
+          await makeSlogan({ data: undefined });
+        } catch {
+          // A slogan is a nice-to-have — never block onboarding on it.
+        }
+      }
       await qc.invalidateQueries({ queryKey: ["profile"] });
       toast.success(skip ? "You can fill this in later from your profile." : "Beacon is set up.");
       navigate({ to: "/dashboard", replace: true });
