@@ -381,15 +381,20 @@ export type Database = {
           about_me: string | null
           avatar_url: string | null
           created_at: string
+          developer_mode: boolean
           display_name: string | null
+          english_correction: boolean
           id: string
           improvement_areas: string | null
+          journal_questions: Json | null
           main_goals: string | null
           memory_enabled: boolean
           onboarding_completed: boolean
           onboarding_completed_at: string | null
           preferences: Json
           purpose: string | null
+          slogan: string | null
+          telegram_enabled: boolean
           updated_at: string
           why_beacon: string | null
         }
@@ -397,15 +402,20 @@ export type Database = {
           about_me?: string | null
           avatar_url?: string | null
           created_at?: string
+          developer_mode?: boolean
           display_name?: string | null
+          english_correction?: boolean
           id: string
           improvement_areas?: string | null
+          journal_questions?: Json | null
           main_goals?: string | null
           memory_enabled?: boolean
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
           preferences?: Json
           purpose?: string | null
+          slogan?: string | null
+          telegram_enabled?: boolean
           updated_at?: string
           why_beacon?: string | null
         }
@@ -413,15 +423,20 @@ export type Database = {
           about_me?: string | null
           avatar_url?: string | null
           created_at?: string
+          developer_mode?: boolean
           display_name?: string | null
+          english_correction?: boolean
           id?: string
           improvement_areas?: string | null
+          journal_questions?: Json | null
           main_goals?: string | null
           memory_enabled?: boolean
           onboarding_completed?: boolean
           onboarding_completed_at?: string | null
           preferences?: Json
           purpose?: string | null
+          slogan?: string | null
+          telegram_enabled?: boolean
           updated_at?: string
           why_beacon?: string | null
         }
