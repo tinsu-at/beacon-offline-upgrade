@@ -28,6 +28,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { InstallPwaButton } from "@/components/install-pwa";
+import { useFeatures } from "@/lib/features";
 
 export const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -48,6 +49,11 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const { telegramEnabled, developerMode } = useFeatures();
+  const navItems = NAV_ITEMS.filter(
+    (i) =>
+      (i.url !== "/telegram" || telegramEnabled) && (i.url !== "/developer" || developerMode),
+  );
 
   return (
     <Sidebar collapsible="icon" className="hidden md:flex">
@@ -66,7 +72,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigate</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => {
+              {navItems.map((item) => {
                 const active = pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.url}>

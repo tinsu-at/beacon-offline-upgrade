@@ -16,6 +16,7 @@ import {
   Send,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useFeatures } from "@/lib/features";
 
 const items = [
   { title: "Home", url: "/dashboard", icon: LayoutDashboard },
@@ -38,7 +39,12 @@ const moreItems = [
 export function MobileNav() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const [open, setOpen] = useState(false);
-  const moreActive = moreItems.some((i) => pathname.startsWith(i.url));
+  const { telegramEnabled, developerMode } = useFeatures();
+  const visibleMore = moreItems.filter(
+    (i) =>
+      (i.url !== "/telegram" || telegramEnabled) && (i.url !== "/developer" || developerMode),
+  );
+  const moreActive = visibleMore.some((i) => pathname.startsWith(i.url));
 
   return (
     <nav
@@ -88,7 +94,7 @@ export function MobileNav() {
         <SheetContent side="bottom" className="rounded-t-3xl pb-8">
           <SheetTitle className="font-serif text-lg">All of Beacon</SheetTitle>
           <div className="mt-4 grid grid-cols-3 gap-3">
-            {moreItems.map((item) => {
+            {visibleMore.map((item) => {
               const active = pathname.startsWith(item.url);
               return (
                 <Link
