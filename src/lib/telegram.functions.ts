@@ -7,6 +7,7 @@ import { z } from "zod";
  * Telegram is enabled per account. The shared bot connection belongs to the
  * account that has it switched on — other accounts must connect their own bot.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function telegramAllowed(context: { supabase: any; userId: string }) {
   const { data } = await context.supabase
     .from("profiles")
