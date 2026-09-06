@@ -64,3 +64,66 @@ export const updateProfile = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
+
+/**
+ * Creates a short personal slogan from the user's own onboarding answers.
+ * Never reuses another account's slogan.
+ */
+export const generateSlogan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("purpose, main_goals, why_beacon, improvement_areas, about_me, slogan")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (!profile) return { slogan: null as string | null };
+
+    const answers = [
+      profile.purpose && `Who they want to become: ${profile.purpose}`,
+      profile.main_goals && `Goals: ${profile.main_goals}`,
+      profile.why_beacon && `Why they use Beacon: ${profile.why_beacon}`,
+      profile.improvement_areas && `Areas to improve: ${profile.improvement_areas}`,
+      profile.about_me && `About them: ${profile.about_me}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    if (!answers.trim()) return { slogan: null as string | null };
+
+    const key = process.env["LOVABLE_API_KEY"];
+    if (!key) return { slogan: null as string | null };
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
+      body: JSON.stringify({
+        model: "google/gemini-3.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              'Write ONE short personal slogan (max 12 words) for this person, in their own spirit, based only on what they wrote. It must be a single sentence, motivating, concrete, no quotes, no emojis, no hashtags. Reply with JSON: {"slogan": string}.',
+          },
+          { role: "user", content: answers },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) return { slogan: null as string | null };
+    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    let slogan: string | null = null;
+    try {
+      const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}") as {
+        slogan?: string;
+      };
+      if (typeof parsed.slogan === "string" && parsed.slogan.trim()) {
+        slogan = parsed.slogan.trim().slice(0, 200);
+      }
+    } catch {
+      slogan = null;
+    }
+    if (!slogan) return { slogan: null as string | null };
+
+    await context.supabase.from("profiles").update({ slogan }).eq("id", context.userId);
+    return { slogan };
+  });
