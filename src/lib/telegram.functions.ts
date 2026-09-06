@@ -3,16 +3,44 @@ import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+/**
+ * Telegram is enabled per account. The shared bot connection belongs to the
+ * account that has it switched on — other accounts must connect their own bot.
+ */
+async function telegramAllowed(context: { supabase: any; userId: string }) {
+  const { data } = await context.supabase
+    .from("profiles")
+    .select("telegram_enabled")
+    .eq("id", context.userId)
+    .maybeSingle();
+  return data?.telegram_enabled === true;
+}
+
+const NOT_ALLOWED = "Telegram is not enabled for this account.";
+
 export const getTelegramStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { hasBotToken } = await import("@/lib/telegram.server");
+    const allowed = await telegramAllowed(context);
+    if (!allowed) {
+      return {
+        allowed: false,
+        tokenConfigured: false,
+        connected: false,
+        botUsername: null,
+        automationEnabled: false,
+        sleepingMode: false,
+        connectedAt: null,
+      };
+    }
     const { data } = await context.supabase
       .from("telegram_settings")
       .select("connected, bot_username, automation_enabled, sleeping_mode, connected_at")
       .eq("user_id", context.userId)
       .maybeSingle();
     return {
+      allowed: true,
       tokenConfigured: hasBotToken(),
       connected: data?.connected ?? false,
       botUsername: data?.bot_username ?? null,
