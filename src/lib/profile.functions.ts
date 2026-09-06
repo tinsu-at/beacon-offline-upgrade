@@ -26,6 +26,12 @@ export const getProfile = createServerFn({ method: "GET" })
     return created;
   });
 
+const questionSchema = z.object({
+  id: z.string().min(1).max(60),
+  label: z.string().min(1).max(300),
+  kind: z.enum(["text", "yesno"]),
+});
+
 const profileInput = z.object({
   display_name: z.string().max(120).nullable().optional(),
   purpose: z.string().max(2000).nullable().optional(),
@@ -35,6 +41,10 @@ const profileInput = z.object({
   about_me: z.string().max(4000).nullable().optional(),
   memory_enabled: z.boolean().optional(),
   onboarding_completed: z.boolean().optional(),
+  developer_mode: z.boolean().optional(),
+  english_correction: z.boolean().optional(),
+  slogan: z.string().max(300).nullable().optional(),
+  journal_questions: z.array(questionSchema).max(30).nullable().optional(),
 });
 
 export const updateProfile = createServerFn({ method: "POST" })
