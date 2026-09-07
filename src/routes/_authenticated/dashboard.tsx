@@ -200,7 +200,7 @@ function Dashboard() {
           {greeting()}, {profile?.display_name ?? "friend"}.
         </h1>
         <p className="mt-3 max-w-xl text-base text-muted-foreground md:text-lg">
-          Let's become someone a child would be proud to imitate.
+          {slogan ?? "Let's become the person you said you want to be."}
         </p>
 
         <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

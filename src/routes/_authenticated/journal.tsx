@@ -11,16 +11,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { formatLongDate, todayISO } from "@/lib/beacon-data";
-import { Sparkles, Trash2 } from "lucide-react";
+import { Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { writeOrQueue } from "@/lib/offline";
 import { journalInsights } from "@/lib/journal.functions";
 import {
-  REFLECTION_QUESTIONS,
+  buildDefaultQuestions,
   labelFor,
   parseEntry,
   withReflections,
+  type ReflectionQuestion,
   type Reflections,
 } from "@/lib/journal-reflections";
+import { useFeatures, useJournalQuestions } from "@/lib/features";
+import { updateProfile } from "@/lib/profile.functions";
 
 type Entry = {
   id: string;
@@ -52,6 +55,23 @@ function JournalPage() {
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("");
   const [answers, setAnswers] = useState<Reflections>({});
+  const { developerMode, slogan } = useFeatures();
+  const questions = useJournalQuestions();
+  const saveProfileFn = useServerFn(updateProfile);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<ReflectionQuestion[] | null>(null);
+  const draftQuestions = draft ?? questions;
+
+  async function persistQuestions(next: ReflectionQuestion[] | null) {
+    try {
+      await saveProfileFn({ data: { journal_questions: next } });
+      await qc.invalidateQueries({ queryKey: ["profile"] });
+      setDraft(null);
+      toast.success(next ? "Questions saved" : "Default questions restored");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save questions");
+    }
+  }
 
   const getInsights = useServerFn(journalInsights);
   const insights = useMutation({
@@ -86,7 +106,7 @@ function JournalPage() {
       id: crypto.randomUUID(),
       user_id: user.id,
       title: title || null,
-      content: withReflections(content, answers),
+      content: withReflections(content, answers, questions),
       mood: mood || null,
       entry_date: todayISO(),
     };
@@ -175,7 +195,119 @@ function JournalPage() {
                 Answer what you can — short answers are perfect.
               </p>
             </div>
-            {REFLECTION_QUESTIONS.map((q) => (
+            {developerMode && (
+              <div className="space-y-3 rounded-2xl border border-dashed border-border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-medium">Customize my questions</p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={() => {
+                        setDraft(editing ? null : questions.map((q) => ({ ...q })));
+                        setEditing((v) => !v);
+                      }}
+                    >
+                      {editing ? "Close" : "Edit"}
+                    </Button>
+                    {editing && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="rounded-full"
+                        onClick={() => persistQuestions(null)}
+                      >
+                        <RotateCcw className="mr-1 h-3.5 w-3.5" /> Defaults
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {editing && (
+                  <div className="space-y-2">
+                    {draftQuestions.map((q, i) => (
+                      <div key={q.id} className="flex items-start gap-2">
+                        <Textarea
+                          rows={2}
+                          value={q.label}
+                          onChange={(e) =>
+                            setDraft(
+                              draftQuestions.map((x, j) =>
+                                j === i ? { ...x, label: e.target.value } : x,
+                              ),
+                            )
+                          }
+                        />
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={q.kind === "yesno" ? "default" : "outline"}
+                            className="rounded-full text-[10px]"
+                            onClick={() =>
+                              setDraft(
+                                draftQuestions.map((x, j) =>
+                                  j === i
+                                    ? { ...x, kind: x.kind === "yesno" ? "text" : "yesno" }
+                                    : x,
+                                ),
+                              )
+                            }
+                          >
+                            {q.kind === "yesno" ? "Yes/No" : "Text"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setDraft(draftQuestions.filter((_, j) => j !== i))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() =>
+                          setDraft([
+                            ...draftQuestions,
+                            {
+                              id: `q_${Date.now().toString(36)}`,
+                              label: "",
+                              kind: "text" as const,
+                            },
+                          ])
+                        }
+                      >
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Add question
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="rounded-full"
+                        onClick={() =>
+                          persistQuestions(
+                            draftQuestions
+                              .map((q) => ({ ...q, label: q.label.trim() }))
+                              .filter((q) => q.label),
+                          )
+                        }
+                      >
+                        Save questions
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {questions.map((q) => (
               <div key={q.id} className="space-y-2">
                 <Label className="text-sm font-normal leading-snug">{q.label}</Label>
                 {q.kind === "yesno" ? (
@@ -244,7 +376,7 @@ function JournalPage() {
 
       <div className="space-y-3">
         {entries.map((e) => {
-          const { body, reflections } = parseEntry(e.content ?? "");
+          const { body, reflections } = parseEntry(e.content ?? "", questions);
           const answered = Object.entries(reflections);
           return (
             <Card key={e.id} className="rounded-2xl p-5">
@@ -261,7 +393,7 @@ function JournalPage() {
                 <dl className="mt-4 space-y-2 border-t pt-3">
                   {answered.map(([id, value]) => (
                     <div key={id}>
-                      <dt className="text-xs text-muted-foreground">{labelFor(id)}</dt>
+                      <dt className="text-xs text-muted-foreground">{labelFor(id, questions)}</dt>
                       <dd className="text-sm">{value}</dd>
                     </div>
                   ))}
