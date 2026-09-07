@@ -52,6 +52,16 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         if (!settings) return Response.json({ ok: true, ignored: "not-connected" });
         const ownerId = settings.user_id;
 
+        // Telegram is per-account: ignore updates when the owner no longer has it enabled.
+        const { data: ownerProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("telegram_enabled")
+          .eq("id", ownerId)
+          .maybeSingle();
+        if (!ownerProfile?.telegram_enabled) {
+          return Response.json({ ok: true, ignored: "telegram-disabled" });
+        }
+
         // 3. Identify / create the customer.
         const from = message?.from;
         const displayName =
