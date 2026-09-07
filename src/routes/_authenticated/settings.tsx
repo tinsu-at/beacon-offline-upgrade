@@ -52,6 +52,7 @@ import {
 } from "@/lib/push";
 import { TelegramSettingsCard } from "@/components/telegram-settings-card";
 import { isOnline, writeOrQueue } from "@/lib/offline";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — Beacon" }] }),
@@ -99,6 +100,29 @@ function SettingsPage() {
       return data;
     },
   });
+
+  const features = useFeatures();
+
+  async function setFeature(patch: Record<string, boolean>) {
+    if (!user) return;
+    qc.setQueryData(["profile", user.id], (old: Record<string, unknown> | null | undefined) =>
+      old ? { ...old, ...patch } : old,
+    );
+    try {
+      const queued = await writeOrQueue({
+        label: "Feature settings",
+        table: "profiles",
+        type: "update",
+        rowId: user.id,
+        values: patch,
+      });
+      if (queued) toast.success("Saved offline — will sync later");
+      else qc.invalidateQueries({ queryKey: ["profile"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    }
+  }
 
   useEffect(() => {
     if (profile?.display_name) setName(profile.display_name);
