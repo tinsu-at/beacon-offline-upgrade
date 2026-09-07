@@ -15,7 +15,6 @@ import { Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { writeOrQueue } from "@/lib/offline";
 import { journalInsights } from "@/lib/journal.functions";
 import {
-  buildDefaultQuestions,
   labelFor,
   parseEntry,
   withReflections,
@@ -55,7 +54,7 @@ function JournalPage() {
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("");
   const [answers, setAnswers] = useState<Reflections>({});
-  const { developerMode, slogan } = useFeatures();
+  const { developerMode } = useFeatures();
   const questions = useJournalQuestions();
   const saveProfileFn = useServerFn(updateProfile);
   const [editing, setEditing] = useState(false);

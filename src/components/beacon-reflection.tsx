@@ -62,7 +62,7 @@ export function BeaconReflection() {
           </div>
           <DialogTitle className="text-center font-serif text-xl">The Beacon Principle</DialogTitle>
           <DialogDescription className="text-center">
-            Did your actions today make you someone a child would be proud to imitate?
+            {reflectionQuestion}
           </DialogDescription>
         </DialogHeader>
 

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useFeatures } from "@/lib/features";
 import { supabase } from "@/integrations/supabase/client";
 import {
   challengeOfDay,
@@ -71,6 +72,7 @@ function CircularProgress({
 
 function Dashboard() {
   const { user } = useAuth();
+  const { slogan } = useFeatures();
   const today = todayISO();
   const quote = quoteOfDay(today);
   const challenge = challengeOfDay(today);

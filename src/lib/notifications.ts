@@ -63,7 +63,7 @@ export const DEFAULT_NOTIF_PREFS: NotifPrefs = {
     enabled: true,
     time: "21:00",
     title: "Evening reflection",
-    body: "Did today make you someone a child would be proud to imitate?",
+    body: "Did today move you closer to who you want to become?",
   },
   dailyReview: {
     enabled: false,
