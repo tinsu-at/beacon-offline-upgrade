@@ -52,6 +52,7 @@ import {
 } from "@/lib/push";
 import { TelegramSettingsCard } from "@/components/telegram-settings-card";
 import { isOnline, writeOrQueue } from "@/lib/offline";
+import { useFeatures } from "@/lib/features";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — Beacon" }] }),
@@ -99,6 +100,29 @@ function SettingsPage() {
       return data;
     },
   });
+
+  const features = useFeatures();
+
+  async function setFeature(patch: Record<string, boolean>) {
+    if (!user) return;
+    qc.setQueryData(["profile", user.id], (old: Record<string, unknown> | null | undefined) =>
+      old ? { ...old, ...patch } : old,
+    );
+    try {
+      const queued = await writeOrQueue({
+        label: "Feature settings",
+        table: "profiles",
+        type: "update",
+        rowId: user.id,
+        values: patch,
+      });
+      if (queued) toast.success("Saved offline — will sync later");
+      else qc.invalidateQueries({ queryKey: ["profile"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    }
+  }
 
   useEffect(() => {
     if (profile?.display_name) setName(profile.display_name);
@@ -266,7 +290,39 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      <TelegramSettingsCard />
+      <Card className="rounded-3xl">
+        <CardHeader>
+          <CardTitle className="font-serif text-lg">Extra features</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between rounded-2xl border border-border p-4">
+            <div>
+              <p className="font-medium">Developer Mode</p>
+              <p className="text-xs text-muted-foreground">
+                Unlocks the Developer page and lets you customize your journal questions.
+              </p>
+            </div>
+            <Switch
+              checked={features.developerMode}
+              onCheckedChange={(v) => setFeature({ developer_mode: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-2xl border border-border p-4">
+            <div>
+              <p className="font-medium">English Correction</p>
+              <p className="text-xs text-muted-foreground">
+                Beacon gently corrects your English in chat when it matters.
+              </p>
+            </div>
+            <Switch
+              checked={features.englishCorrection}
+              onCheckedChange={(v) => setFeature({ english_correction: v })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {features.telegramEnabled && <TelegramSettingsCard />}
       <Card className="rounded-3xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-serif text-lg">

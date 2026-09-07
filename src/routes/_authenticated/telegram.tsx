@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Send, Trash2, UserCheck, Bot } from "lucide-react";
+import { FeatureGate } from "@/components/feature-gate";
 
 export const Route = createFileRoute("/_authenticated/telegram")({
   head: () => ({
@@ -32,7 +33,15 @@ export const Route = createFileRoute("/_authenticated/telegram")({
       },
     ],
   }),
-  component: TelegramPage,
+  component: () => (
+    <FeatureGate
+      feature="telegramEnabled"
+      title="Telegram is not enabled"
+      description="Telegram is not available on this account yet. Each account needs to connect its own Telegram bot."
+    >
+      <TelegramPage />
+    </FeatureGate>
+  ),
 });
 
 function TelegramPage() {

@@ -13,6 +13,8 @@ import { useAuth } from "@/lib/auth";
 import { todayISO } from "@/lib/beacon-data";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
+import { useFeatures } from "@/lib/features";
+import { buildDefaultQuestions } from "@/lib/journal-reflections";
 
 export function BeaconReflection() {
   const { user } = useAuth();
@@ -21,6 +23,8 @@ export function BeaconReflection() {
   const [note, setNote] = useState("");
   const [madeProud, setMadeProud] = useState<boolean | null>(null);
   const today = todayISO();
+  const { slogan } = useFeatures();
+  const reflectionQuestion = buildDefaultQuestions(slogan).find((q) => q.id === "beacon")!.label;
 
   useEffect(() => {
     if (!user) return;
@@ -62,7 +66,7 @@ export function BeaconReflection() {
           </div>
           <DialogTitle className="text-center font-serif text-xl">The Beacon Principle</DialogTitle>
           <DialogDescription className="text-center">
-            Did your actions today make you someone a child would be proud to imitate?
+            {reflectionQuestion}
           </DialogDescription>
         </DialogHeader>
 
