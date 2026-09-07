@@ -266,7 +266,39 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      <TelegramSettingsCard />
+      <Card className="rounded-3xl">
+        <CardHeader>
+          <CardTitle className="font-serif text-lg">Extra features</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between rounded-2xl border border-border p-4">
+            <div>
+              <p className="font-medium">Developer Mode</p>
+              <p className="text-xs text-muted-foreground">
+                Unlocks the Developer page and lets you customize your journal questions.
+              </p>
+            </div>
+            <Switch
+              checked={features.developerMode}
+              onCheckedChange={(v) => setFeature({ developer_mode: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-2xl border border-border p-4">
+            <div>
+              <p className="font-medium">English Correction</p>
+              <p className="text-xs text-muted-foreground">
+                Beacon gently corrects your English in chat when it matters.
+              </p>
+            </div>
+            <Switch
+              checked={features.englishCorrection}
+              onCheckedChange={(v) => setFeature({ english_correction: v })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {features.telegramEnabled && <TelegramSettingsCard />}
       <Card className="rounded-3xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-serif text-lg">
