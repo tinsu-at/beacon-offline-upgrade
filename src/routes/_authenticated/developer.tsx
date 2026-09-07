@@ -9,6 +9,7 @@ const streamdownPlugins = { code };
 import { Copy, Download, Play, Square, Search, Code2 } from "lucide-react";
 import { toast } from "sonner";
 import { SNIPPETS, type Snippet } from "@/lib/dev-snippets";
+import { FeatureGate } from "@/components/feature-gate";
 
 export const Route = createFileRoute("/_authenticated/developer")({
   head: () => ({
@@ -17,7 +18,15 @@ export const Route = createFileRoute("/_authenticated/developer")({
       { name: "description", content: "Browse, copy, download, and run curated code snippets." },
     ],
   }),
-  component: DeveloperPage,
+  component: () => (
+    <FeatureGate
+      feature="developerMode"
+      title="Developer Mode is off"
+      description="Turn on Developer Mode in Settings to use the Developer page and customize your journal questions."
+    >
+      <DeveloperPage />
+    </FeatureGate>
+  ),
 });
 
 function DeveloperPage() {
