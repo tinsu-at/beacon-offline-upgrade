@@ -36,16 +36,18 @@ Daily accountability:
 - Morning: help review yesterday, set 1–3 real priorities, and offer one confidence challenge.
 - Evening: ask what they accomplished, what distracted them, what they learned, and what they will improve tomorrow. Then reflect it back briefly.
 
-English coach mode:
-- If the user's message contains a meaningful English mistake (grammar, word choice, awkward phrasing), begin your reply with exactly one line: "✍️ Small fix: <corrected sentence>". If the mistake is important, add a one-sentence "Why:" note. Then continue with the actual answer.
-- If there is nothing worth correcting, skip the fix line entirely. Never force it. One fix per message maximum.
-
 Style:
 - Short paragraphs. Plain language. Zero filler ("Great question!", "Absolutely!", "I'm just an AI").
 - Use markdown for structure only when it helps: bold anchors, tight lists, fenced code blocks with language tags for any code (\`\`\`ts, \`\`\`bash, \`\`\`sql).
 - End with at most one meaningful question — only if it truly moves them forward. Silence is fine.
 - When they share a struggle: acknowledge briefly, then one small, doable next step.
 - When they are wrong: say so, explain, offer the better path. Then let them decide.`;
+
+const ENGLISH_COACH_PROMPT = `
+
+English coach mode:
+- If the user's message contains a meaningful English mistake (grammar, word choice, awkward phrasing), begin your reply with exactly one line: "\u270D\uFE0F Small fix: <corrected sentence>". If the mistake is important, add a one-sentence "Why:" note. Then continue with the actual answer.
+- If there is nothing worth correcting, skip the fix line entirely. Never force it. One fix per message maximum.`;
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -168,13 +170,17 @@ export const Route = createFileRoute("/api/chat")({
 
         // Personalization: this user's own profile (purpose, goals, context)
         let personalContext = "";
+        let englishCoach = "";
         try {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("display_name, purpose, main_goals, why_beacon, improvement_areas, about_me")
+            .select(
+              "display_name, purpose, main_goals, why_beacon, improvement_areas, about_me, english_correction, slogan",
+            )
             .eq("id", userId)
             .maybeSingle();
           if (profile) {
+            if (profile.english_correction === true) englishCoach = ENGLISH_COACH_PROMPT;
             const lines = [
               profile.display_name ? `Name: ${profile.display_name}` : null,
               profile.purpose ? `Who they want to become: ${profile.purpose}` : null,
@@ -182,6 +188,7 @@ export const Route = createFileRoute("/api/chat")({
               profile.why_beacon ? `Why they use Beacon: ${profile.why_beacon}` : null,
               profile.improvement_areas ? `Areas to improve: ${profile.improvement_areas}` : null,
               profile.about_me ? `Context about them: ${profile.about_me}` : null,
+              profile.slogan ? `Their personal slogan: ${profile.slogan}` : null,
             ].filter(Boolean);
             if (lines.length) {
               personalContext =
@@ -268,7 +275,7 @@ export const Route = createFileRoute("/api/chat")({
 
         const nowLine = `\n\nCurrent local date/time reference: ${new Date().toISOString()}`;
         const composedSystem =
-          SYSTEM_PROMPT + nowLine + personalContext + memoryContext + stateContext + recentContext;
+          SYSTEM_PROMPT + englishCoach + nowLine + personalContext + memoryContext + stateContext + recentContext;
 
         const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
         const model = gateway("google/gemini-3.5-flash");
