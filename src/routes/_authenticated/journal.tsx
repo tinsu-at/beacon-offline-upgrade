@@ -209,7 +209,7 @@ function JournalPage() {
                         setEditing((v) => !v);
                       }}
                     >
-                      {editing ? "Close" : "Edit"}
+                      {editing ? "Close" : "Edit Questions"}
                     </Button>
                     {editing && (
                       <Button
