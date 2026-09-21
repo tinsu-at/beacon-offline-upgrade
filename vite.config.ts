@@ -7,12 +7,6 @@ export default defineConfig({
   tanstackStart: {
     spa: {
       enabled: true,
-      // Capacitor requires a real HTML entry point in dist/client.
-      // TanStack Start's SPA shell defaults to /_shell.html, so emit the
-      // shell as index.html for the native webview bundle.
-      prerender: {
-        outputPath: "/index.html",
-      },
     },
     server: { entry: "server" },
   },
@@ -47,8 +41,6 @@ export default defineConfig({
               cacheName: "beacon-pages",
               networkTimeoutSeconds: 4,
               expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 7 },
-              // Offline + never-visited route: show the offline shell instead
-              // of the browser's network error page.
               precacheFallback: { fallbackURL: "/offline.html" },
             },
           },
