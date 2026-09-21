@@ -5,7 +5,15 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   tanstackStart: {
-    spa: { enabled: true },
+    spa: {
+      enabled: true,
+      // Capacitor requires a real HTML entry point in dist/client.
+      // TanStack Start's SPA shell defaults to /_shell.html, so emit the
+      // shell as index.html for the native webview bundle.
+      prerender: {
+        outputPath: "/index.html",
+      },
+    },
     server: { entry: "server" },
   },
   plugins: [
