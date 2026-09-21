@@ -21,6 +21,7 @@ export async function initNative(opts: { dark: boolean; onBack: () => boolean })
       import("@capacitor/splash-screen"),
       import("@capacitor/app"),
     ]);
+    await StatusBar.setOverlaysWebView({ overlay: true });
     await StatusBar.setStyle({ style: opts.dark ? Style.Dark : Style.Light });
     await StatusBar.setBackgroundColor({ color: opts.dark ? "#0F1729" : "#FBF6EC" }).catch(
       () => undefined,
@@ -41,6 +42,7 @@ export async function setNativeStatusBarTheme(dark: boolean) {
   if (!isNative()) return;
   try {
     const { StatusBar, Style } = await import("@capacitor/status-bar");
+    await StatusBar.setOverlaysWebView({ overlay: true });
     await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light });
     await StatusBar.setBackgroundColor({ color: dark ? "#0F1729" : "#FBF6EC" }).catch(
       () => undefined,
