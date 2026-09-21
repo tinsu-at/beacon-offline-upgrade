@@ -15,16 +15,16 @@ const config: CapacitorConfig = {
   appId: "app.lovable.beacon",
   appName: "Beacon",
   webDir: "dist/client",
-  server: {
-    url: "https://tinsae-beacon-light.lovable.app",
-    cleartext: false,
-    androidScheme: "https",
-  },
+  // Keep the Android app self-contained: Capacitor serves the bundled dist/client files.
+  // Cloud AI, Supabase sync, and other server features remain online-only.
   android: {
     allowMixedContent: false,
     backgroundColor: "#FBF6EC",
   },
   plugins: {
+    StatusBar: {
+      overlaysWebView: true,
+    },
     SplashScreen: {
       launchAutoHide: false,
       backgroundColor: "#FBF6EC",
