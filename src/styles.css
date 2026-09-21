@@ -266,3 +266,18 @@ body {
   header, nav, button, [role="button"] { user-select: none; }
 }
 
+
+
+/* Native Android WebView: one predictable vertical scroll surface. */
+html, body, #root {
+  min-height: 100%;
+}
+body {
+  min-height: 100dvh;
+  overflow-y: auto;
+}
+@media (max-width: 767px) {
+  body {
+    overscroll-behavior-y: none;
+  }
+}
