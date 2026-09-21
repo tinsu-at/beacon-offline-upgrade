@@ -4,7 +4,10 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  tanstackStart: {\n    spa: { enabled: true },\n    server: { entry: "server" },\n  },
+  tanstackStart: {
+    spa: { enabled: true },
+    server: { entry: "server" },
+  },
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
