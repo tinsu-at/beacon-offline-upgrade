@@ -96,7 +96,7 @@ function Shell() {
       <AppLock />
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <header className="safe-top sticky top-0 z-20 box-content flex h-14 items-center justify-between border-b border-border/60 bg-background/70 px-4 backdrop-blur">
             <div className="hidden md:block">
               <SidebarTrigger />
@@ -112,7 +112,7 @@ function Shell() {
             </div>
           </header>
           <OfflineBanner />
-          <main className="flex min-h-0 flex-1 flex-col pb-24 md:pb-0">
+          <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24 md:pb-0">
             <Outlet />
           </main>
           <MobileNav />
